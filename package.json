@@ -1,0 +1,19 @@
+{
+  "name": "-kt-markdown-it-p-captions",
+  "version": "0.1.0",
+  "description": "A markdown-it plugin. For a paragraph, it determines if it is a caption from the string at the beginning of the paragraph and adds a class attribute value to indicate that it is a caption.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peaceroad/-kt-markdown-it-p-captions.git"
+  },
+  "author": "peaceroad <peaceroad@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/peaceroad/-kt-markdown-it-p-captions/issues"
+  },
+  "homepage": "https://github.com/peaceroad/-kt-markdown-it-p-captions#readme"
+}
