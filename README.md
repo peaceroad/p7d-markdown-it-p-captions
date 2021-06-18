@@ -37,11 +37,59 @@ Fig: Caption
 図　キャプション
 ```
 
-Exceptionally, if the serial number continues, it will work without this delimiter.
+Exceptionally, if the serial number continues, it will work without this delimiter. However, the next character must be uppercase.
 
 ```md
 Fig 1.1 Caption.
 
 図1.1 Caption.
+```
+
+Example: 
+
+```js
+  [
+    'Figure. A cat.',
+    '<p class="caption-img">Figure. A cat.</p>\n'
+  ], [
+    'Figure is a cat.',
+    '<p>Figure is a cat.</p>\n'
+  ], [
+    'Figure 1. A cat.',
+    '<p class="caption-img">Figure 1. A cat.</p>\n'
+  ], [
+    'Figure 1 is a cat.',
+    '<p>Figure 1 is a cat.</p>\n'
+  ], [
+    'Figure A is a cat.',
+    '<p>Figure A is a cat.</p>\n'
+  ], [
+    'Figure A A cat.',
+    '<p class="caption-img">Figure A A cat.</p>\n'
+  ], [
+    'Figure 1 A cat.',
+    '<p class="caption-img">Figure 1 A cat.</p>\n'
+  ], [
+    'Figure 1 a cat.',
+    '<p>Figure 1 a cat.</p>\n'
+  ], [
+    '図　猫',
+    '<p class="caption-img">図　猫</p>\n'
+  ], [
+    '図 猫',
+    '<p class="caption-img">図 猫</p>\n'
+  ], [
+    '図1　猫',
+    '<p class="caption-img">図1　猫</p>\n'
+  ], [
+    '図1.1 猫',
+    '<p class="caption-img">図1.1 猫</p>\n'
+  ], [
+    '図は猫',
+    '<p>図は猫</p>\n'
+  ] , [
+    '図1は猫',
+    '<p>図1は猫</p>\n'
+  ]
 ```
 
