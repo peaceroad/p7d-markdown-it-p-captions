@@ -15,10 +15,10 @@ console.log(md.render(src));
 | class attribute value | Character string at the beginning of a paragraph (uppercase or lowercase) |
 | ---- | ---- |
 | `caption-img` | fig, figure, illust, photo, 図, イラスト, 写真 |
-| `caption-video` | movie, video, 動画 |
+| `caption-video` | movie, video, 動画, ビデオ |
 | `caption-table` | table, 表 |
 | `caption-pre-code` | code, codeblock, program, コード, ソースコード, プログラム |
-| `caption-pre-samp` | terminal, prompt, ターミナル, プロンプト |
+| `caption-pre-samp` | terminal, prompt, command, ターミナル, プロンプト, コマンド |
 | `caption-example` | example, 例 |
 
 In addition, a delimiter is required after these strings.
