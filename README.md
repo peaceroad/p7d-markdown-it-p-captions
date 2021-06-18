@@ -51,6 +51,24 @@ Example:
 
 ```js
   [
+    'Figure',
+    '<p>Figure</p>\n'
+  ], [
+    'Figure ',
+    '<p>Figure</p>\n'
+  ], [
+    'Figure.',
+    '<p class="caption-img">Figure.</p>\n'
+  ], [
+      'Figure.',
+      '<p class="caption-img">Figure.</p>\n'
+  ], [
+      'Figure 1',
+    '<p class="caption-img">Figure 1</p>\n'
+  ], [
+    'Figure A.1',
+    '<p class="caption-img">Figure A.1</p>\n'
+  ], [
     'Figure. A cat.',
     '<p class="caption-img">Figure. A cat.</p>\n'
   ], [
@@ -75,8 +93,20 @@ Example:
     'Figure 1 a cat.',
     '<p>Figure 1 a cat.</p>\n'
   ], [
-    '図　猫',
-    '<p class="caption-img">図　猫</p>\n'
+    '図',
+    '<p>図</p>\n'
+  ], [
+    '図 ',
+    '<p>図</p>\n'
+  ], [
+    '図.',
+    '<p class="caption-img">図.</p>\n'
+  ], [
+    '図1',
+    '<p class="caption-img">図1</p>\n'
+  ], [
+    '図1.1',
+    '<p class="caption-img">図1.1</p>\n'
   ], [
     '図 猫',
     '<p class="caption-img">図 猫</p>\n'
@@ -92,6 +122,8 @@ Example:
   ] , [
     '図1は猫',
     '<p>図1は猫</p>\n'
+  ], [
+    '図1.1は猫',
+    '<p>図1.1は猫</p>\n'
   ]
 ```
-

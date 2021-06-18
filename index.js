@@ -4,22 +4,25 @@ function convertToCaption(state) {
   let n = 0;
   const markAfterNum = '(?:[A-Z0-9]{1,3}[.-]){0,5}[A-Z0-9]{1,3}';
   const markAfterNumAfterJoint = '[.:．　。：]';
-  const markAfterNumAfterJointJa = '[ .:．　。：]';
+  const markAfterNumAfterJointJa = '[:．。：]';
 
 
   const markAfterEn = '(?:' +
-    markAfterNumAfterJoint + '|' +
-    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')?)[ 　]*(?=[A-Z])';
+    markAfterNumAfterJoint + '[ 　]*|' +
+    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')?[ 　]*(?=(?:[A-Z]|$))' +
+  ')';
 
-    const markAfter = markAfterEn;
   const markAfterJa = '(?:' +
-    markAfterNumAfterJointJa + '|' +
-    '[ 　]*' + markAfterNum + markAfterNumAfterJointJa + ')[ 　]*';
+    '(?:[ 　]+|[.](?:(?=[^ 　])|$))|' +
+    markAfterNumAfterJointJa + '(?:[ 　]*|[.](?:(?=[^ 　])|$))|' +
+    '[ 　]*' + markAfterNum + markAfterNumAfterJointJa + '(?:[ 　]*|[.](?:(?=[^ 　])|$))|' +
+    '[ 　]*' + markAfterNum + '(?:[ 　]+|$)' +
+  ')';
 
   //fig(ure)?, illust, photo
   const imageMarkReg = new RegExp('^(?:' +
     '(?:[fF][iI][gG](:?[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO[tT][oO])'+ markAfterEn + '|' +
-   '(?:図|イラスト|写真)' + markAfterJa +
+    '(?:図|イラスト|写真)' + markAfterJa +
   ')');
 
   //movie, video
