@@ -21,7 +21,7 @@ console.log(md.render(src));
 | `caption-pre-samp` | terminal, prompt, command, ターミナル, プロンプト, コマンド |
 | `caption-example` | example, 例 |
 
-In addition, a delimiter is required after these strings.
+In addition, a delimiter is required after these strings. If the character string is Japanese, half-width spaces are allowed. 
 
 ```md
 Fig. Caption
@@ -35,6 +35,8 @@ Fig: Caption
 図：キャプション
 
 図　キャプション
+
+図 キャプション
 ```
 
 Exceptionally, if the serial number continues, it will work without this delimiter. However, the next character must be uppercase.
