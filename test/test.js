@@ -14,10 +14,7 @@ const ms = [
     'Figure.',
     '<p class="caption-img">Figure.</p>\n'
   ], [
-      'Figure.',
-      '<p class="caption-img">Figure.</p>\n'
-  ], [
-      'Figure 1',
+    'Figure 1',
     '<p class="caption-img">Figure 1</p>\n'
   ], [
     'Figure A.1',
@@ -34,9 +31,6 @@ const ms = [
   ], [
     'Figure 1 is a cat.',
     '<p>Figure 1 is a cat.</p>\n'
-  ], [
-    'Figure A is a cat.',
-    '<p>Figure A is a cat.</p>\n'
   ], [
     'Figure A A cat.',
     '<p class="caption-img">Figure A A cat.</p>\n'
