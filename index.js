@@ -41,7 +41,7 @@ function convertToCaption(state) {
   //code(block)?, program
   const codeMarkReg = new RegExp('^(?:' +
     '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM])'+ markAfterEn + '|' +
-    '(?:(ソース)?コード|ブロック)' + markAfterJa +
+    '(?:(ソース)?コード|プログラム)' + markAfterJa +
   ')');
 
   //terminal, prompt, command
