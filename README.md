@@ -7,9 +7,9 @@ const md = require('markdown-it')();
 const captions = require('p7d-markdown-it-p-captions');
 md.use(captions);
 
-const src = 'Illust 1. A caption.\n';
+const src = 'Figure 1. A caption.\n';
 console.log(md.render(src));
-// <p class="caption-img">Illust 1. A caption.</p>
+// <p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A caption.</p>
 ```
 
 | class attribute value | Character string at the beginning of a paragraph (uppercase or lowercase) |
@@ -58,34 +58,43 @@ Example:
     '<p>Figure</p>\n'
   ], [
     'Figure.',
-    '<p class="caption-img">Figure.</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span></p>\n'
+  ], [
+    'Figure:',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span></p>\n'
   ], [
     'Figure 1',
-    '<p class="caption-img">Figure 1</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">Figure 1</span></p>\n'
   ], [
     'Figure A.1',
-    '<p class="caption-img">Figure A.1</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">Figure A.1</span></p>\n'
   ], [
     'Figure. A cat.',
-    '<p class="caption-img">Figure. A cat.</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
+  ], [
+    'Figure: A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
   ], [
     'Figure is a cat.',
     '<p>Figure is a cat.</p>\n'
   ], [
     'Figure 1. A cat.',
-    '<p class="caption-img">Figure 1. A cat.</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
   ], [
     'Figure 1 is a cat.',
     '<p>Figure 1 is a cat.</p>\n'
   ], [
     'Figure A A cat.',
-    '<p class="caption-img">Figure A A cat.</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">Figure A</span> A cat.</p>\n'
   ], [
     'Figure 1 A cat.',
-    '<p class="caption-img">Figure 1 A cat.</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">Figure 1</span> A cat.</p>\n'
   ], [
     'Figure 1 a cat.',
     '<p>Figure 1 a cat.</p>\n'
+  ], [
+    'Figure 1: A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
   ], [
     '図',
     '<p>図</p>\n'
@@ -94,22 +103,22 @@ Example:
     '<p>図</p>\n'
   ], [
     '図.',
-    '<p class="caption-img">図.</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>\n'
   ], [
     '図1',
-    '<p class="caption-img">図1</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">図1</span></p>\n'
   ], [
     '図1.1',
-    '<p class="caption-img">図1.1</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">図1.1</span></p>\n'
   ], [
     '図 猫',
-    '<p class="caption-img">図 猫</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">図</span> 猫</p>\n'
   ], [
     '図1　猫',
-    '<p class="caption-img">図1　猫</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>猫</p>\n'
   ], [
     '図1.1 猫',
-    '<p class="caption-img">図1.1 猫</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">図1.1</span> 猫</p>\n'
   ], [
     '図は猫',
     '<p>図は猫</p>\n'
