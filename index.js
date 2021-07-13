@@ -53,7 +53,7 @@ function convertToCaption(state) {
   while (n < state.tokens.length - 1) {
     const token = state.tokens[n];
     const nextToken = state.tokens[n+1];
-    const isParagraphStartTag = token.type === 'paragraph_open'
+    const isParagraphStartTag = token.type === 'paragraph_open';
     if (!isParagraphStartTag) { n++; continue; }
 
     let hasMark = false;
@@ -70,11 +70,11 @@ function convertToCaption(state) {
           actualLabelJoint = actualLabelJoint[1];
         }
         actualLabel = actualLabel.replace(/ *$/, '');
-        
+        /*
         console.log('hasMark: ' + hasMark + ' =============================');
         console.log('actualLabel: ' + actualLabel);
         console.log('actualLabelJoint: ' + actualLabelJoint);
-        
+        */
         addLabel(nextToken, mark, actualLabel, actualLabelJoint);
         break;
       }
