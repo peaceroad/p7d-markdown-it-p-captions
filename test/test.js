@@ -90,7 +90,7 @@ const ms = [
 const msCP = [
   [
     'Figure. A cat.',
-    '<p class="f-img"><span class="f-img-label">Figure<span class="f-img-label-joint">:</span></span> A cat.</p>\n'
+    '<p class="f-img"><span class="f-img-label">Figure<span class="f-img-label-joint">.</span></span> A cat.</p>\n'
   ],
 ];
 
@@ -109,12 +109,12 @@ while(n < ms.length) {
 n = 0;
 while(n < msCP.length) {
   console.log('Test(msCP): ' + n);
-  const h =   mdClassPrefix.render(msCP[n][0]);
+  const hCP =   mdClassPrefix.render(msCP[n][0]);
   try {
-    assert.strictEqual(h, msCP[n][1]);
+    assert.strictEqual(hCP, msCP[n][1]);
   } catch(e) {
     console.log('Incorrect: ')
-    console.log('M: ' + msCP[n][0] + '\nH: ' + h +'C: ' + msCP[n][1]);
+    console.log('M: ' + msCP[n][0] + '\nH: ' + hCP +'C: ' + msCP[n][1]);
   };
   n++;
 }

@@ -131,8 +131,8 @@ function addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt) {
   return true;
 }
 
-module.exports = function plugin(md) {
-  md.core.ruler.after('inline', 'markdown-it-p-captions', (state, option) => {
+module.exports = function plugin(md, option) {
+  md.core.ruler.after('inline', 'markdown-it-p-captions', (state) => {
     convertToCaption(state, option);
   });
 }
