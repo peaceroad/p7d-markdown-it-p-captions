@@ -1,6 +1,15 @@
 'use strict';
 
-function convertToCaption(state) {
+function convertToCaption(state, option) {
+  const opt = {
+    classPrefix: 'caption',
+  };
+  if (option !== undefined) {
+    if (option.classPrefix !== undefined) {
+      opt.classPrefix = option.classPrefix;
+    }
+  }
+
   let n = 0;
   const markAfterNum = '(?:[A-Z0-9]{1,3}[.-]){0,5}[A-Z0-9]{1,3}';
   const markAfterNumAfterJoint = '[.:．　。：]';
@@ -63,7 +72,7 @@ function convertToCaption(state) {
       const hasMarkLabel = nextToken.content.match(markReg[mark]);
       if (hasMarkLabel) {
         hasMark = true;
-        addClass(token, 'caption-' + mark);
+        token.attrJoin('class', opt.classPrefix + '-' + mark);
         actualLabel = hasMarkLabel[0];
         actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + '|' + markAfterNumAfterJointJa + '|[.:]) *$'));
         if(actualLabelJoint) {
@@ -75,7 +84,7 @@ function convertToCaption(state) {
         console.log('actualLabel: ' + actualLabel);
         console.log('actualLabelJoint: ' + actualLabelJoint);
         */
-        addLabel(nextToken, mark, actualLabel, actualLabelJoint);
+        addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt);
         break;
       }
     };
@@ -83,21 +92,6 @@ function convertToCaption(state) {
   }
 }
 
-function addClass(token, className) {
-  token.attrs = token.attrs || [];
-  const ats = token.attrs.map(x => x[0]);
-  const i = ats.indexOf('class');
-  if (i === -1) {
-    token.attrs.push(['class', className]);
-  } else {
-    let classVal = token.attrs[i][1] || '';
-    const classNames = classStr.split(' ');
-    if (classNames.indexOf(className) === -1) {
-      classVal += ' ' + className;
-      token.attrs[i][1] = classVal;
-    }
-  }
-}
 function actualLabelContent (actualLabel, actualLabelJoint) {
   if (actualLabelJoint) {
     return actualLabel.replace(new RegExp('\\\\' + actualLabelJoint + '$'), '');
@@ -106,131 +100,39 @@ function actualLabelContent (actualLabel, actualLabelJoint) {
   }
 }
 
-function addLabel(nextToken, mark, actualLabel, actualLabelJoint) {
-  const lt_first = {
-    type: "text",
-    tag: "",
-    attrs: null,
-    map: null,
-    nesting: 0,
-    level: 0,
-    children: null,
-    content: "",
-    markup: "",
-    info: "",
-    meta: null,
-    block: false,
-    hidden: false,
-  };
-  const lt_span_open = {
-    type: "span_open",
-    tag: "span",
-    attrs: [["class", "caption-" + mark + "-label"]],
-    map: null,
-    nesting: 1,
-    level: 0,
-    children: null,
-    content: "",
-    markup: "",
-    info: "",
-    meta: null,
-    block: false,
-    hidden: false,
-  };
-  const lt_span_content = {
-    type: "text",
-    tag: "",
-    attrs: null,
-    map: null,
-    nesting: 0,
-    level: 1,
-    children: null,
-    content: actualLabelContent(actualLabel, actualLabelJoint),
-    markup: "",
-    info: "",
-    meta: null,
-    block: false,
-    hidden: false,
-  };
-  const lt_span_close = {
-    type: "span_close",
-    tag: "span",
-    attrs: null,
-    map: null,
-    nesting: -1,
-    level: 0,
-    children: null,
-    content: "",
-    markup: "",
-    info: "",
-    meta: null,
-    block: false,
-    hidden: false,
-  };
+function addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt) {
+
+  const labelTokenFirst = new state.Token('text', '', 0);
+  const labelTokenOpen = new state.Token('span_open', 'span', 1);
+  labelTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-label');
+  const labelTokenContent = new state.Token('text', '', 0);
+  labelTokenContent.content = actualLabelContent(actualLabel, actualLabelJoint);
+  const labelTokenClose = new state.Token('span_close', 'span', -1);
+
   nextToken.children[0].content = nextToken.children[0].content.replace(actualLabel, '');
-  nextToken.children.unshift(lt_span_close);
-  nextToken.children.unshift(lt_span_content);
-  nextToken.children.unshift(lt_span_open);
-  nextToken.children.unshift(lt_first);
+  nextToken.children.unshift(labelTokenClose);
+  nextToken.children.unshift(labelTokenContent);
+  nextToken.children.unshift(labelTokenOpen);
+  nextToken.children.unshift(labelTokenFirst);
+
 
   // Add label joint span.
   if (!actualLabelJoint) { return; }
   nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(actualLabelJoint + ' *$'), '');
-  //console.log(nextToken);
-  const ljt_span_open = {
-    type: "span_open",
-    tag: "span",
-    attrs: [["class", "caption-" + mark + "-label-joint"]],
-    map: null,
-    nesting: 1,
-    level: 0,
-    children: null,
-    content: "",
-    markup: "",
-    info: "",
-    meta: null,
-    block: false,
-    hidden: false,
-  };
-  const ljt_span_content = {
-    type: "text",
-    tag: "",
-    attrs: null,
-    map: null,
-    nesting: 0,
-    level: 1,
-    children: null,
-    content: actualLabelJoint,
-    markup: "",
-    info: "",
-    meta: null,
-    block: false,
-    hidden: false,
-  };
-  const ljt_span_close = {
-    type: "span_close",
-    tag: "span",
-    attrs: null,
-    map: null,
-    nesting: -1,
-    level: 0,
-    children: null,
-    content: "",
-    markup: "",
-    info: "",
-    meta: null,
-    block: false,
-    hidden: false,
-  };
-  nextToken.children.splice(3, 0, ljt_span_close);
-  nextToken.children.splice(3, 0, ljt_span_content);
-  nextToken.children.splice(3, 0, ljt_span_open);
 
-  return;
+  const labelJointTokenOpen = new state.Token('span_open', 'span', 1);
+  labelJointTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-label-joint');
+  const labelJointTokenContent = new state.Token('text', '', 0);
+  labelJointTokenContent.content = actualLabelJoint;
+  const labelJointTokenClose = new state.Token('span_close', 'span', -1);
+
+  nextToken.children.splice(3, 0, labelJointTokenOpen, labelJointTokenContent, labelJointTokenClose);
+
+  return true;
 }
 
 module.exports = function plugin(md) {
-  md.core.ruler.after('inline', 'markdown-it-p-captions', (state) => {
-    convertToCaption(state);
+  md.core.ruler.after('inline', 'markdown-it-p-captions', (state, option) => {
+    convertToCaption(state, option);
   });
 }

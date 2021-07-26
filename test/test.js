@@ -1,7 +1,9 @@
 const assert = require('assert');
-const md = require('markdown-it')();
+const mdDefault = require('markdown-it')();
+const mdClassPrefix = require('markdown-it')();
 const captions = require('../index.js');
-md.use(captions);
+mdDefault.use(captions);
+mdClassPrefix.use(captions, {'classPrefix': 'f'});
 
 const ms = [
   [
@@ -85,14 +87,34 @@ const ms = [
   ]
 ];
 
+const msCP = [
+  [
+    'Figure. A cat.',
+    '<p class="f-img"><span class="f-img-label">Figure<span class="f-img-label-joint">:</span></span> A cat.</p>\n'
+  ],
+];
+
 let n = 0;
 while(n < ms.length) {
-  const h = md.render(ms[n][0]);
+  console.log('Test(ms): ' + n);
+  const h = mdDefault.render(ms[n][0]);
   try {
     assert.strictEqual(h, ms[n][1]);
   } catch(e) {
     console.log('Incorrect: ')
     console.log('M: ' + ms[n][0] + '\nH: ' + h +'C: ' + ms[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msCP.length) {
+  console.log('Test(msCP): ' + n);
+  const h =   mdClassPrefix.render(msCP[n][0]);
+  try {
+    assert.strictEqual(h, msCP[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msCP[n][0] + '\nH: ' + h +'C: ' + msCP[n][1]);
   };
   n++;
 }

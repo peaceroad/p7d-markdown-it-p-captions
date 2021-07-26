@@ -12,6 +12,18 @@ console.log(md.render(src));
 // <p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A caption.</p>
 ```
 
+If you want to change the prefix of the class name from ‘caption’, set the option as follows.
+
+```js
+const md = require('markdown-it')();
+const captions = require('p7d-markdown-it-p-captions');
+md.use(captions, {'classPrefix': 'f'});
+
+const src = 'Figure 1. A caption.\n';
+console.log(md.render(src));
+// <p class="f-img"><span class="f-img-label">Figure 1<span class="f-img-label-joint">.</span></span> A caption.</p>
+```
+
 | class attribute value | Character string at the beginning of a paragraph (uppercase or lowercase) |
 | ---- | ---- |
 | `caption-img` | fig, figure, illust, photo, 図, イラスト, 写真 |
