@@ -1,6 +1,6 @@
 {
   "name": "p7d-markdown-it-p-captions",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "A markdown-it plugin. For a paragraph, it determines if it is a caption from the string at the beginning of the paragraph and adds a class attribute value to indicate that it is a caption.",
   "main": "index.js",
   "scripts": {
