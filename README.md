@@ -29,7 +29,7 @@ console.log(md.render(src));
 | `caption-img` | fig, figure, illust, photo, 図, イラスト, 写真 |
 | `caption-video` | movie, video, 動画, ビデオ |
 | `caption-table` | table, 表 |
-| `caption-pre-code` | code, codeblock, program, コード, ソースコード, プログラム |
+| `caption-pre-code` | code, codeblock, program, algorithm, コード, ソースコード, 命令, プログラム, 算譜, アルゴリズム, 算法 |
 | `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト |
 | `caption-example` | example, 例 |
 
