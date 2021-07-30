@@ -30,10 +30,10 @@ console.log(md.render(src));
 | `caption-video` | movie, video, 動画, ビデオ |
 | `caption-table` | table, 表 |
 | `caption-pre-code` | code, codeblock, program, コード, ソースコード, プログラム |
-| `caption-pre-samp` | terminal, prompt, command, ターミナル, プロンプト, コマンド |
+| `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト |
 | `caption-example` | example, 例 |
 
-In addition, a delimiter is required after these strings. If the character string is Japanese, half-width spaces are allowed. 
+In addition, a delimiter is required after these strings. If the character string is Japanese, half-width spaces are allowed.
 
 ```md
 Fig. Caption
