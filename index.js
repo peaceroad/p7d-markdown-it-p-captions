@@ -49,8 +49,8 @@ function convertToCaption(state, option) {
     ')'),
     //terminal, prompt, command
     "pre-samp": new RegExp('^(?:' +
-      '(?:[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
-      '(?:ターミナル|プロンプト|コマンド)' + markAfterJa +
+      '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
+      '(?:端末|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
     ')'),
     //example
     "example": new RegExp('^(?:' +
