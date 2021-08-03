@@ -11,19 +11,19 @@ function convertToCaption(state, option) {
   }
 
   let n = 0;
-  const markAfterNum = '(?:[A-Z0-9]{1,3}[.-]){0,5}[A-Z0-9]{1,3}';
+  const markAfterNum = '[A-Z0-9]{1,3}(?:[.-][A-Z0-9]{1,3}){0,5}';
   const markAfterNumAfterJoint = '[.:．　。：]';
-  const markAfterNumAfterJointJa = '[:．。：]';
 
   const markAfterEn = '(?:' +
-    markAfterNumAfterJoint + '[ 　]*|' +
-    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')?[ 　]*(?=(?:[A-Z]|$))' +
+    markAfterNumAfterJoint + '[ 　]*(?:(?=[^a-z])|$)|' +
+    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')?(?:[ 　]+(?=[^a-z])|$)|' +
+    '[ 　]*' + markAfterNum + '[ 　]+(?=[^a-z])' +
   ')';
   const markAfterJa = '(?:' +
-    '(?:[ 　]+|[.](?:(?=[^ 　])|$))|' +
-    markAfterNumAfterJointJa + '(?:[ 　]*|[.](?:(?=[^ 　])|$))|' +
-    '[ 　]*' + markAfterNum + markAfterNumAfterJointJa + '(?:[ 　]*|[.](?:(?=[^ 　])|$))|' +
-    '[ 　]*' + markAfterNum + '(?:[ 　]+|$)' +
+    markAfterNumAfterJoint + '(?:[ 　]+|$)|' +
+    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')?(?:[ 　]+(?=[^a-z])|$)|' +
+    '[ 　]*' + markAfterNum + '[ 　]+|' +
+    '[ 　]+' +
   ')';
 
   const markReg = {

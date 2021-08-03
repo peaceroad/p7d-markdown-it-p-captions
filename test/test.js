@@ -84,6 +84,18 @@ const ms = [
   ], [
     '図1.1は猫',
     '<p>図1.1は猫</p>\n'
+  ], [
+    'Figure 1. 猫',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> 猫</p>\n'
+  ], [
+    '図11　A Cat.',
+    '<p class="caption-img"><span class="caption-img-label">図11<span class="caption-img-label-joint">　</span></span>A Cat.</p>\n'
+  ], [
+    'Table 11. A table.',
+    '<p class="caption-table"><span class="caption-table-label">Table 11<span class="caption-table-label-joint">.</span></span> A table.</p>\n'
+  ], [
+    'Table 11. 表',
+    '<p class="caption-table"><span class="caption-table-label">Table 11<span class="caption-table-label-joint">.</span></span> 表</p>\n'
   ]
 ];
 
