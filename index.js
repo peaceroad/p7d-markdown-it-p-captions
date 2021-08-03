@@ -74,7 +74,7 @@ function convertToCaption(state, option) {
         hasMark = true;
         token.attrJoin('class', opt.classPrefix + '-' + mark);
         actualLabel = hasMarkLabel[0];
-        actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + '|' + markAfterNumAfterJointJa + '|[.:]) *$'));
+        actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + ')[ 　]*$'));
         if(actualLabelJoint) {
           actualLabelJoint = actualLabelJoint[1];
         }
