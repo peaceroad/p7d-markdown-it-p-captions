@@ -33,12 +33,12 @@ console.log(md.render(src));
 | `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト |
 | `caption-example` | example, 例 |
 
-In addition, a delimiter is required after these strings. If the character string is Japanese, half-width spaces are allowed.
+In addition, a delimiter is required after these strings, and then one space is needed. If the character string is Japanese, half-width spaces only are allowed.
 
 ```md
-Fig. Caption
+Fig. A caption
 
-Fig: Caption
+Fig: A caption
 
 図．キャプション
 
@@ -51,15 +51,35 @@ Fig: Caption
 図 キャプション
 ```
 
-Exceptionally, if the serial number continues, it will work without this delimiter. However, the next character must be uppercase.
+You can also put a serial number, such as 0-9A-Z.-, between the first term and the separator.
 
 ```md
-Fig 1.1 Caption.
+Fig 1. A caption
 
-図1.1 Caption.
+Fig 1.1. A caption
+
+Fig A: A caption
+
+図1.1 キャプション
 ```
 
-Example: 
+Only when it has this serial number, it can be identified by omitting the separator and adding only a space. In English, the space must begin with an uppercase letter.
+
+```md
+Fig 1 A caption.
+
+Fig 1.1 A caption.
+
+Figure A A caption
+```
+
+Also, It identifies the `Figure.1` type. This format has a dot immediately after the first term, a serial number after it, and a space after it.
+
+```md
+Figure.1 A caption.
+```
+
+Example:
 
 ```js
   [
