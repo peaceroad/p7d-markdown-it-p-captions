@@ -22,8 +22,8 @@ function convertToCaption(state, option) {
   ')';
   const markAfterJa = '(?:' +
     '[ 　]*(?:' + markAfterNumAfterJoint + '|(?=[ ]))|' +
-    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')(?:(?=[ ])|$)|' +
-    '[ 　]*' + markAfterNum + '(?:[　]|(?=[ ])|$)' +
+    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + '(?:(?=[ ])|$))|' +
+    '[ 　]*' + markAfterNum + '(?:[:。．:：　]|(?=[ ])|$)' +
   ')';
 
   const markReg = {

@@ -114,7 +114,26 @@ const ms = [
   ], [
     'Figure.A A cat.',
     '<p class="caption-img"><span class="caption-img-label">Figure.A</span> A cat.</p>\n'
+  ], [
+    '図：A cat.',
+    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">：</span></span>A cat.</p>\n'
+  ], [
+    '図1：A cat.',
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">：</span></span>A cat.</p>\n'
+  ], [
+    '図1.1. A cat.',
+    '<p class="caption-img"><span class="caption-img-label">図1.1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
+  ], [
+    '図1.1.A Cat.',
+    '<p class="caption-img"><span class="caption-img-label">図1.1.A</span> Cat.</p>\n'
+  ], [
+    '図1: A cat.',
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
+  ], [
+    '図1.1: A cat.',
+    '<p class="caption-img"><span class="caption-img-label">図1.1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
   ]
+
 ];
 
 const msCP = [
