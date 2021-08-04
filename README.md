@@ -60,10 +60,10 @@ Fig 1.1. A caption
 
 Fig A: A caption
 
-図1.1 キャプション
+図1.1：キャプション
 ```
 
-Only when it has this serial number, it can be identified by omitting the separator and adding only a space. In English, the space must begin with an uppercase letter.
+Only when it has this serial number, it can be identified by omitting the separator and adding only a space. In English, the caption written after a space must begin with an uppercase letter.
 
 ```md
 Fig 1 A caption.
@@ -73,7 +73,7 @@ Fig 1.1 A caption.
 Figure A A caption
 ```
 
-Also, It identifies the `Figure.1` type. This format has a dot immediately after the first term, a serial number after it, and a space after it.
+Also, It identifies the `Figure.1` type. This format has a dot immediately after the first term, a serial number and a space after it. In this case, too, the caption written after a space must begin with an uppercase letter.
 
 ```md
 Figure.1 A caption.

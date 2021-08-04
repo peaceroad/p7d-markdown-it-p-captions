@@ -112,11 +112,8 @@ const ms = [
     '図A a cat.',
     '<p class="caption-img"><span class="caption-img-label">図A</span> a cat.</p>\n'
   ], [
-    'Figure.A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure.A</span> cat.</p>\n'
-  ], [
-    'Figure.1 A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure.1</span> A cat.</p>\n'
+    'Figure.A A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure.A</span> A cat.</p>\n'
   ]
 ];
 
