@@ -11,19 +11,19 @@ function convertToCaption(state, option) {
   }
 
   let n = 0;
-  const markAfterNum = '[A-Z0-9]{1,3}(?:[.-][A-Z0-9]{1,3}){0,5}';
-  const markAfterNumAfterJoint = '[.:．　。：]';
+  const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}';
+  const markAfterNumAfterJoint = '[.:．。：　]';
 
   const markAfterEn = '(?:' +
-    markAfterNumAfterJoint + '[ 　]*(?:(?=[^a-z])|$)|' +
-    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')?(?:[ 　]+(?=[^a-z])|$)|' +
-    '[ 　]*' + markAfterNum + '[ 　]+(?=[^a-z])' +
+    '[ 　]*' + markAfterNumAfterJoint + '(?:(?=[ ]+)|$)|' +
+    '[ 　]*' + markAfterNum + markAfterNumAfterJoint + '(?:(?=[ ]+)|$)|' +
+    '[ 　]*' + markAfterNum + '(?:(?=[ 　]+[^a-z])|$)|' +
+    '[.]' + markAfterNum + '(?:(?=[ 　])|$)' +
   ')';
   const markAfterJa = '(?:' +
-    markAfterNumAfterJoint + '(?:[ 　]+|$)|' +
-    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')?(?:[ 　]+(?=[^a-z])|$)|' +
-    '[ 　]*' + markAfterNum + '[ 　]+|' +
-    '[ 　]+' +
+    '[ 　]*(?:' + markAfterNumAfterJoint + '|(?=[ ]))|' +
+    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + ')(?:(?=[ ])|$)|' +
+    '[ 　]*' + markAfterNum + '(?:[　]|(?=[ ])|$)' +
   ')';
 
   const markReg = {
@@ -74,7 +74,7 @@ function convertToCaption(state, option) {
         hasMark = true;
         token.attrJoin('class', opt.classPrefix + '-' + mark);
         actualLabel = hasMarkLabel[0];
-        actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + ')[ 　]*$'));
+        actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + '|)$'));
         if(actualLabelJoint) {
           actualLabelJoint = actualLabelJoint[1];
         }
