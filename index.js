@@ -45,17 +45,17 @@ function convertToCaption(state, option) {
     //code(block)?, program
     "pre-code": new RegExp('^(?:' +
       '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI[tT][hH][mM])'+ markAfterEn + '|' +
-      '(?:(ソース)?コード|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
+      '(?:(?:ソース)?コード|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
     ')'),
     //terminal, prompt, command
     "pre-samp": new RegExp('^(?:' +
       '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
       '(?:端末|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
     ')'),
-    //example
-    "example": new RegExp('^(?:' +
-      '(?:[eE][xX][aA][mM][pP][lL][eE])'+ markAfterEn + '|' +
-      '(?:例)' + markAfterJa +
+    //quote, blockquote
+    "blockquote": new RegExp('^(?:' +
+      '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE])'+ markAfterEn + '|' +
+      '(?:引用(?:元)?|出典)' + markAfterJa +
     ')')
   };
 
