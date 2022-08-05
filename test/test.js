@@ -179,6 +179,10 @@ const msStrongFilename = [
     'Code. \\**Filename.js** Call a cat.',
     '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> *<em>Filename.js</em>* Call a cat.</p>\n'
   ],
+  [
+    'Code.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span></p>\n'
+  ],
 ];
 
 let n = 0;

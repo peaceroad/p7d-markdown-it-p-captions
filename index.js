@@ -131,17 +131,19 @@ function addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt) {
   nextToken.children[0].content = nextToken.children[0].content.replace(actualLabel, '');
 
 
-  if (opt.dquoteFilename) {
-    if (nextToken.children[0].content.match(/^[ 　]*?"\S.*?"[ 　]+/)) {
-      markFilename(state, nextToken, mark, opt);
+  if (opt.strongFilename) {
+    if (nextToken.children.length > 4) {
+      if(nextToken.children[1].type === 'strong_open'
+        && nextToken.children[3].type === 'strong_close'
+        && /^[ 　]/.test(nextToken.children[4].content)) {
+        nextToken.children[1].attrJoin('class', opt.classPrefix + '-' + mark + '-filename');
+      }
     }
   }
 
-  if (opt.strongFilename) {
-    if(nextToken.children[1].type === 'strong_open'
-      && nextToken.children[3].type === 'strong_close'
-      && /^[ 　]/.test(nextToken.children[4].content)) {
-      nextToken.children[1].attrJoin('class', opt.classPrefix + '-' + mark + '-filename');
+  if (opt.dquoteFilename) {
+    if (nextToken.children[0].content.match(/^[ 　]*?"\S.*?"[ 　]+/)) {
+      markFilename(state, nextToken, mark, opt);
     }
   }
 
