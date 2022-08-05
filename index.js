@@ -3,11 +3,13 @@
 function convertToCaption(state, option) {
   const opt = {
     classPrefix: 'caption',
+    dquoteFilename: false,
+    strongFilename: false,
   };
   if (option !== undefined) {
-    if (option.classPrefix !== undefined) {
-      opt.classPrefix = option.classPrefix;
-    }
+    if (option.classPrefix !== undefined) opt.classPrefix = option.classPrefix;
+    if (option.dquoteFilename !== undefined) opt.dquoteFilename = option.dquoteFilename;
+    if (option.strongFilename !== undefined) opt.strongFilename = option.strongFilename;
   }
 
   let n = 0;
@@ -100,6 +102,23 @@ function actualLabelContent (actualLabel, actualLabelJoint) {
   }
 }
 
+function markFilename (state, nextToken, mark, opt) {
+
+  let filename = nextToken.children[0].content.match(/^([ 　]*?)"(\S.*?)"[ 　]+/);
+  nextToken.children[0].content = nextToken.children[0].content.replace(/^[ 　]*?"\S.*?"([ 　]+)/, '$1');
+
+  const beforeFilenameToken = new state.Token('text', '', 0)
+  beforeFilenameToken.content = filename[1];
+  const filenameTokenOpen = new state.Token('strong_open', 'strong', 1);
+  filenameTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-filename');
+  const filenameTokenContent = new state.Token('text', '', 0);
+  filenameTokenContent.content = filename[2];
+  const filenameTokenClose = new state.Token('strong_close', 'strong', -1);
+
+  nextToken.children.splice(0, 0, beforeFilenameToken, filenameTokenOpen, filenameTokenContent, filenameTokenClose);
+  return;
+}
+
 function addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt) {
 
   const labelTokenFirst = new state.Token('text', '', 0);
@@ -110,11 +129,23 @@ function addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt) {
   const labelTokenClose = new state.Token('span_close', 'span', -1);
 
   nextToken.children[0].content = nextToken.children[0].content.replace(actualLabel, '');
-  nextToken.children.unshift(labelTokenClose);
-  nextToken.children.unshift(labelTokenContent);
-  nextToken.children.unshift(labelTokenOpen);
-  nextToken.children.unshift(labelTokenFirst);
 
+
+  if (opt.dquoteFilename) {
+    if (nextToken.children[0].content.match(/^[ 　]*?"\S.*?"[ 　]+/)) {
+      markFilename(state, nextToken, mark, opt);
+    }
+  }
+
+  if (opt.strongFilename) {
+    if(nextToken.children[1].type === 'strong_open'
+      && nextToken.children[3].type === 'strong_close'
+      && /^[ 　]/.test(nextToken.children[4].content)) {
+      nextToken.children[1].attrJoin('class', opt.classPrefix + '-' + mark + '-filename');
+    }
+  }
+
+  nextToken.children.splice(0, 0, labelTokenFirst, labelTokenOpen, labelTokenContent, labelTokenClose);
 
   // Add label joint span.
   if (!actualLabelJoint) { return; }

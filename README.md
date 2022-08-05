@@ -17,7 +17,7 @@ If you want to change the prefix of the class name from ‘caption’, set the o
 ```js
 const md = require('markdown-it')();
 const captions = require('p7d-markdown-it-p-captions');
-md.use(captions, {'classPrefix': 'f'});
+md.use(captions, {classPrefix: 'f'});
 
 const src = 'Figure 1. A caption.\n';
 console.log(md.render(src));
@@ -161,4 +161,29 @@ Example:
     '図1.1は猫',
     '<p>図1.1は猫</p>\n'
   ]
+```
+
+## Option: Specify file name
+
+Specify the file name before writing the caption.
+Note that a space is required between the file name and caption.
+
+### Use double quote
+
+```js
+md.use(captions, {dquoteFilename: true});
+
+const src = 'Code. "Filename.js" Call a cat.';
+console.log(md.render(src));
+// <p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong> Call a cat.</p>\n
+```
+
+### Use strong quote
+
+```js
+md.use(captions, {dquoteFilename: true});
+
+const src = 'Code. **Filename** A caption.\n';
+console.log(md.render(src));
+//<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong> Call a cat.</p>\n'
 ```

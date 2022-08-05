@@ -1,9 +1,15 @@
 const assert = require('assert');
 const mdDefault = require('markdown-it')();
 const mdClassPrefix = require('markdown-it')();
+const mdDquoteFilename = require('markdown-it')();
+const mdStrongFilename = require('markdown-it')();
+
 const captions = require('../index.js');
+
 mdDefault.use(captions);
-mdClassPrefix.use(captions, {'classPrefix': 'f'});
+mdClassPrefix.use(captions, {classPrefix: 'f'});
+mdDquoteFilename.use(captions, {dquoteFilename: true});
+mdStrongFilename.use(captions, {strongFilename: true});
 
 const ms = [
   [
@@ -145,6 +151,36 @@ const msCP = [
   ],
 ];
 
+const msDquoteFilename = [
+  [
+    'Code. "Filename.js" Call a cat.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong> Call a cat.</p>\n'
+  ],
+  [
+    'Code. "Filename.js"Call a cat.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> &quot;Filename.js&quot;Call a cat.</p>\n'
+  ],
+  [
+    'Code. \\"Filename.js"Call a cat.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> &quot;Filename.js&quot;Call a cat.</p>\n'
+  ],
+];
+
+const msStrongFilename = [
+  [
+    'Code. **Filename.js** Call a cat.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong> Call a cat.</p>\n'
+  ],
+  [
+    'Code. **Filename.js**Call a cat.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong>Filename.js</strong>Call a cat.</p>\n'
+  ],
+  [
+    'Code. \\**Filename.js** Call a cat.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> *<em>Filename.js</em>* Call a cat.</p>\n'
+  ],
+];
+
 let n = 0;
 while(n < ms.length) {
   console.log('Test(ms): ' + n);
@@ -169,3 +205,28 @@ while(n < msCP.length) {
   };
   n++;
 }
+n = 0;
+while(n < msDquoteFilename.length) {
+  console.log('Test(msFilename): ' + n);
+  const hDquoteFilename = mdDquoteFilename.render(msDquoteFilename[n][0]);
+  try {
+    assert.strictEqual(hDquoteFilename, msDquoteFilename[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msDquoteFilename[n][0] + '\nH: ' + hDquoteFilename +'C: ' + msDquoteFilename[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msStrongFilename.length) {
+  console.log('Test(msStrongFilename): ' + n);
+  const hStrongFilename = mdStrongFilename.render(msStrongFilename[n][0]);
+  try {
+    assert.strictEqual(hStrongFilename, msStrongFilename[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msStrongFilename[n][0] + '\nH: ' + hStrongFilename +'C: ' + msStrongFilename[n][1]);
+  };
+  n++;
+}
+
