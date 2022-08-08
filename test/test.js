@@ -164,6 +164,10 @@ const msDquoteFilename = [
     'Code. \\"Filename.js"Call a cat.',
     '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> &quot;Filename.js&quot;Call a cat.</p>\n'
   ],
+  [
+    'Code. "Filename.js"',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong></p>\n'
+  ],
 ];
 
 const msStrongFilename = [
@@ -180,8 +184,8 @@ const msStrongFilename = [
     '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> *<em>Filename.js</em>* Call a cat.</p>\n'
   ],
   [
-    'Code.',
-    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span></p>\n'
+    'Code. **Filename.js**',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong></p>\n'
   ],
 ];
 

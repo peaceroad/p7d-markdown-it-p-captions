@@ -104,8 +104,8 @@ function actualLabelContent (actualLabel, actualLabelJoint) {
 
 function markFilename (state, nextToken, mark, opt) {
 
-  let filename = nextToken.children[0].content.match(/^([ 　]*?)"(\S.*?)"[ 　]+/);
-  nextToken.children[0].content = nextToken.children[0].content.replace(/^[ 　]*?"\S.*?"([ 　]+)/, '$1');
+  let filename = nextToken.children[0].content.match(/^([ 　]*?)"(\S.*?)"(?:[ 　]+|$)/);
+  nextToken.children[0].content = nextToken.children[0].content.replace(/^[ 　]*?"\S.*?"([ 　]+|$)/, '$1');
 
   const beforeFilenameToken = new state.Token('text', '', 0)
   beforeFilenameToken.content = filename[1];
@@ -135,14 +135,14 @@ function addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt) {
     if (nextToken.children.length > 4) {
       if(nextToken.children[1].type === 'strong_open'
         && nextToken.children[3].type === 'strong_close'
-        && /^[ 　]/.test(nextToken.children[4].content)) {
+        && /^(?:[ 　]|$)/.test(nextToken.children[4].content)) {
         nextToken.children[1].attrJoin('class', opt.classPrefix + '-' + mark + '-filename');
       }
     }
   }
 
   if (opt.dquoteFilename) {
-    if (nextToken.children[0].content.match(/^[ 　]*?"\S.*?"[ 　]+/)) {
+    if (nextToken.children[0].content.match(/^[ 　]*?"\S.*?"(?:[ 　]+|$)/)) {
       markFilename(state, nextToken, mark, opt);
     }
   }
