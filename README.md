@@ -181,7 +181,7 @@ console.log(md.render(src));
 ### Use strong quote
 
 ```js
-md.use(captions, {dquoteFilename: true});
+md.use(captions, {strongFilename: true});
 
 const src = 'Code. **Filename** A caption.\n';
 console.log(md.render(src));
