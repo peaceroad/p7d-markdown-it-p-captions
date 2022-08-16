@@ -187,3 +187,15 @@ const src = 'Code. **Filename** A caption.\n';
 console.log(md.render(src));
 //<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong> Call a cat.</p>\n'
 ```
+
+## Option: Set class indicating having label number
+
+If the labels have numbers, add class: `label-has-num`
+
+```js
+md.use(captions, {hasNumberClass: true});
+
+const src = 'Code 1. A caption.\n';
+console.log(md.render(src));
+//<p class="caption-pre-code"><span class="caption-pre-code-label label-has-num">Code 1<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>\n'
+```

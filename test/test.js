@@ -3,6 +3,7 @@ const mdDefault = require('markdown-it')();
 const mdClassPrefix = require('markdown-it')();
 const mdDquoteFilename = require('markdown-it')();
 const mdStrongFilename = require('markdown-it')();
+const mdHasNumClass = require('markdown-it')();
 
 const captions = require('../index.js');
 
@@ -10,6 +11,7 @@ mdDefault.use(captions);
 mdClassPrefix.use(captions, {classPrefix: 'f'});
 mdDquoteFilename.use(captions, {dquoteFilename: true});
 mdStrongFilename.use(captions, {strongFilename: true});
+mdHasNumClass.use(captions, {hasNumClass: true});
 
 const ms = [
   [
@@ -139,8 +141,11 @@ const ms = [
     '図1.1: A cat.',
     '<p class="caption-img"><span class="caption-img-label">図1.1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
   ], [
-  'Quote: A cat.',
-  '<p class="caption-blockquote"><span class="caption-blockquote-label">Quote<span class="caption-blockquote-label-joint">:</span></span> A cat.</p>\n'
+    'Quote: A cat.',
+    '<p class="caption-blockquote"><span class="caption-blockquote-label">Quote<span class="caption-blockquote-label-joint">:</span></span> A cat.</p>\n'
+  ], [
+    'リスト1 キャプション',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">リスト1</span> キャプション</p>\n'
   ]
 ];
 
@@ -189,6 +194,107 @@ const msStrongFilename = [
   ],
 ];
 
+const msHasNumClass = [
+  [
+    'Figure',
+    '<p>Figure</p>\n'
+  ], [
+    'Figure ',
+    '<p>Figure</p>\n'
+  ], [
+    'Figure.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span></p>\n'
+  ], [
+    'Figure:',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span></p>\n'
+  ], [
+    'Figure 1',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1</span></p>\n'
+  ], [
+    'Figure A.1',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure A.1</span></p>\n'
+  ], [
+    'Figure. A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
+  ], [
+    'Figure: A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
+  ], [
+    'Figure is a cat.',
+    '<p>Figure is a cat.</p>\n'
+  ], [
+    'Figure 1. A cat.',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
+  ], [
+    'Figure 1 is a cat.',
+    '<p>Figure 1 is a cat.</p>\n'
+  ], [
+    'Figure A A cat.',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure A</span> A cat.</p>\n'
+  ], [
+    'Figure 1 A cat.',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1</span> A cat.</p>\n'
+  ], [
+    'Figure 1 a cat.',
+    '<p>Figure 1 a cat.</p>\n'
+  ], [
+    'Figure 1: A cat.',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
+  ], [
+    '図',
+    '<p>図</p>\n'
+  ], [
+    '図 ',
+    '<p>図</p>\n'
+  ], [
+    '図.',
+    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>\n'
+  ], [
+    '図1',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">図1</span></p>\n'
+  ], [
+    '図1.1',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">図1.1</span></p>\n'
+  ], [
+    '図 猫',
+    '<p class="caption-img"><span class="caption-img-label">図</span> 猫</p>\n'
+  ], [
+    '図1　猫',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">図1<span class="caption-img-label-joint">　</span></span>猫</p>\n'
+  ], [
+    '図1.1 猫',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">図1.1</span> 猫</p>\n'
+  ], [
+    '図は猫',
+    '<p>図は猫</p>\n'
+  ] , [
+    '図1は猫',
+    '<p>図1は猫</p>\n'
+  ], [
+    '図1.1は猫',
+    '<p>図1.1は猫</p>\n'
+  ], [
+    'Figure 1. 猫',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1<span class="caption-img-label-joint">.</span></span> 猫</p>\n'
+  ], [
+    '図11　A Cat.',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">図11<span class="caption-img-label-joint">　</span></span>A Cat.</p>\n'
+  ], [
+    'Table 11. A table.',
+    '<p class="caption-table"><span class="caption-table-label label-has-num">Table 11<span class="caption-table-label-joint">.</span></span> A table.</p>\n'
+  ], [
+    'Table 11. 表',
+    '<p class="caption-table"><span class="caption-table-label label-has-num">Table 11<span class="caption-table-label-joint">.</span></span> 表</p>\n'
+  ], [
+    'Figure. a cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> a cat.</p>\n'
+  ], [
+    'Figure 12. a cat.',
+    '<p class="caption-img"><span class="caption-img-label label-has-num">Figure 12<span class="caption-img-label-joint">.</span></span> a cat.</p>\n'
+  ],
+];
+
+
 let n = 0;
 while(n < ms.length) {
   console.log('Test(ms): ' + n);
@@ -234,6 +340,18 @@ while(n < msStrongFilename.length) {
   } catch(e) {
     console.log('Incorrect: ')
     console.log('M: ' + msStrongFilename[n][0] + '\nH: ' + hStrongFilename +'C: ' + msStrongFilename[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msHasNumClass.length) {
+  console.log('Test(mshasNumClass): ' + n);
+  const hHasNumClass = mdHasNumClass.render(msHasNumClass[n][0]);
+  try {
+    assert.strictEqual(hHasNumClass, msHasNumClass[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msHasNumClass[n][0] + '\nH: ' + hHasNumClass +'C: ' + msHasNumClass[n][1]);
   };
   n++;
 }

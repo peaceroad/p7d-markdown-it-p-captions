@@ -5,11 +5,12 @@ function convertToCaption(state, option) {
     classPrefix: 'caption',
     dquoteFilename: false,
     strongFilename: false,
+    hasNumClass: false,
   };
   if (option !== undefined) {
-    if (option.classPrefix !== undefined) opt.classPrefix = option.classPrefix;
-    if (option.dquoteFilename !== undefined) opt.dquoteFilename = option.dquoteFilename;
-    if (option.strongFilename !== undefined) opt.strongFilename = option.strongFilename;
+    for (let o in option) {
+        opt[o] = option[o];
+    }
   }
 
   let n = 0;
@@ -18,20 +19,20 @@ function convertToCaption(state, option) {
 
   const markAfterEn = '(?:' +
     '[ 　]*' + markAfterNumAfterJoint + '(?:(?=[ ]+)|$)|' +
-    '[ 　]*' + markAfterNum + markAfterNumAfterJoint + '(?:(?=[ ]+)|$)|' +
-    '[ 　]*' + markAfterNum + '(?:(?=[ 　]+[^a-z])|$)|' +
-    '[.]' + markAfterNum + '(?:(?=[ 　]+[^a-z])|$)' +
+    '[ 　]*(' + markAfterNum + ')' + markAfterNumAfterJoint + '(?:(?=[ ]+)|$)|' +
+    '[ 　]*(' + markAfterNum + ')(?:(?=[ 　]+[^a-z])|$)|' +
+    '[.](' + markAfterNum + ')(?:(?=[ 　]+[^a-z])|$)' +
   ')';
   const markAfterJa = '(?:' +
     '[ 　]*(?:' + markAfterNumAfterJoint + '|(?=[ ]))|' +
-    '[ 　]*' + markAfterNum + '(?:' + markAfterNumAfterJoint + '(?:(?=[ ])|$))|' +
-    '[ 　]*' + markAfterNum + '(?:[:。．:：　]|(?=[ ])|$)' +
+    '[ 　]*(' + markAfterNum + ')(?:' + markAfterNumAfterJoint + '(?:(?=[ ])|$))|' +
+    '[ 　]*(' + markAfterNum + ')(?:[:。．:：　]|(?=[ ])|$)' +
   ')';
 
   const markReg = {
     //fig(ure)?, illust, photo
     "img": new RegExp('^(?:' +
-      '(?:[fF][iI][gG](:?[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO[tT][oO])'+ markAfterEn + '|' +
+      '(?:[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO[tT][oO])'+ markAfterEn + '|' +
       '(?:図|イラスト|写真)' + markAfterJa +
     ')'),
     //movie, video
@@ -47,7 +48,7 @@ function convertToCaption(state, option) {
     //code(block)?, program
     "pre-code": new RegExp('^(?:' +
       '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI[tT][hH][mM])'+ markAfterEn + '|' +
-      '(?:(?:ソース)?コード|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
+      '(?:(?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
     ')'),
     //terminal, prompt, command
     "pre-samp": new RegExp('^(?:' +
@@ -67,13 +68,23 @@ function convertToCaption(state, option) {
     const isParagraphStartTag = token.type === 'paragraph_open';
     if (!isParagraphStartTag) { n++; continue; }
 
-    let hasMark = false;
     let actualLabel = '';
+    let actualNum = '';
     let actualLabelJoint = '';
     for (let mark of Object.keys(markReg)) {
       const hasMarkLabel = nextToken.content.match(markReg[mark]);
       if (hasMarkLabel) {
-        hasMark = true;
+        if (opt.hasNumClass) {
+          let i = 1;
+          while (i < 6) {
+            if (hasMarkLabel[i] !== undefined) {
+              actualNum = hasMarkLabel[i];
+              break;
+            }
+            i++;
+          }
+          //console.log('actualNum: ' + actualNum);
+        }
         token.attrJoin('class', opt.classPrefix + '-' + mark);
         actualLabel = hasMarkLabel[0];
         actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + '|)$'));
@@ -82,11 +93,11 @@ function convertToCaption(state, option) {
         }
         actualLabel = actualLabel.replace(/ *$/, '');
         /*
-        console.log('hasMark: ' + hasMark + ' =============================');
+        console.log('=============================');
         console.log('actualLabel: ' + actualLabel);
         console.log('actualLabelJoint: ' + actualLabelJoint);
         */
-        addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt);
+        addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, opt);
         break;
       }
     };
@@ -119,11 +130,14 @@ function markFilename (state, nextToken, mark, opt) {
   return;
 }
 
-function addLabel(state, nextToken, mark, actualLabel, actualLabelJoint, opt) {
+function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, opt) {
 
   const labelTokenFirst = new state.Token('text', '', 0);
   const labelTokenOpen = new state.Token('span_open', 'span', 1);
   labelTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-label');
+  if (opt.hasNumClass && actualNum) {
+    labelTokenOpen.attrJoin('class', 'label-has-num');
+  }
   const labelTokenContent = new state.Token('text', '', 0);
   labelTokenContent.content = actualLabelContent(actualLabel, actualLabelJoint);
   const labelTokenClose = new state.Token('span_close', 'span', -1);
