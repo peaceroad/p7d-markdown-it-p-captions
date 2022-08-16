@@ -193,7 +193,7 @@ console.log(md.render(src));
 If the labels have numbers, add class: `label-has-num`
 
 ```js
-md.use(captions, {hasNumberClass: true});
+md.use(captions, {hasNumClass: true});
 
 const src = 'Code 1. A caption.\n';
 console.log(md.render(src));
