@@ -226,6 +226,5 @@ md.use(captions, {jointSpaceUseHalfWidth: true});
 
 const src = '図　キャプション\n';
 console.log(md.render(src));
-//<p class="caption-img"><span class="caption-img-label">Code 1<span class="caption-img-label-joint"> </span></span>キャプション</p>\n'
+//<p class="caption-img"><span class="caption-img-label">図</span> キャプション</p>\n'
 ```
-
