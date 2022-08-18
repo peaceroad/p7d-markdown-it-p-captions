@@ -6,6 +6,9 @@ function convertToCaption(state, option) {
     dquoteFilename: false,
     strongFilename: false,
     hasNumClass: false,
+    bLabel: false,
+    strongLabel: false,
+    jointSpaceUseHalfWidth: false,
   };
   if (option !== undefined) {
     for (let o in option) {
@@ -92,12 +95,18 @@ function convertToCaption(state, option) {
           actualLabelJoint = actualLabelJoint[1];
         }
         actualLabel = actualLabel.replace(/ *$/, '');
+        
+        let convertJointSpaceFullWith = false;
+        if (opt.jointSpaceUseHalfWidth && actualLabelJoint === '　') {
+          actualLabelJoint = ''
+          convertJointSpaceFullWith = true;
+        }
         /*
         console.log('=============================');
         console.log('actualLabel: ' + actualLabel);
         console.log('actualLabelJoint: ' + actualLabelJoint);
         */
-        addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, opt);
+        addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt);
         break;
       }
     };
@@ -105,10 +114,13 @@ function convertToCaption(state, option) {
   }
 }
 
-function actualLabelContent (actualLabel, actualLabelJoint) {
+function actualLabelContent (actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt) {
   if (actualLabelJoint) {
     return actualLabel.replace(new RegExp('\\\\' + actualLabelJoint + '$'), '');
   } else {
+    if (convertJointSpaceFullWith) {
+      actualLabel = actualLabel.replace(/　$/, '');
+    }
     return actualLabel;
   }
 }
@@ -130,20 +142,26 @@ function markFilename (state, nextToken, mark, opt) {
   return;
 }
 
-function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, opt) {
+function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt) {
+
+  let labelTag = 'span';
+  if (opt.bLabel) labelTag = 'b';
+  if (opt.strongLabel) labelTag = 'strong';
 
   const labelTokenFirst = new state.Token('text', '', 0);
-  const labelTokenOpen = new state.Token('span_open', 'span', 1);
+  const labelTokenOpen = new state.Token(labelTag + '_open', labelTag, 1);
   labelTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-label');
   if (opt.hasNumClass && actualNum) {
     labelTokenOpen.attrJoin('class', 'label-has-num');
   }
   const labelTokenContent = new state.Token('text', '', 0);
-  labelTokenContent.content = actualLabelContent(actualLabel, actualLabelJoint);
-  const labelTokenClose = new state.Token('span_close', 'span', -1);
+  labelTokenContent.content = actualLabelContent(actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt);
+  const labelTokenClose = new state.Token(labelTag + '_close', labelTag, -1);
 
   nextToken.children[0].content = nextToken.children[0].content.replace(actualLabel, '');
-
+  if (convertJointSpaceFullWith) {
+    nextToken.children[0].content = ' ' + nextToken.children[0].content;
+  }
 
   if (opt.strongFilename) {
     if (nextToken.children.length > 4) {

@@ -4,6 +4,9 @@ const mdClassPrefix = require('markdown-it')();
 const mdDquoteFilename = require('markdown-it')();
 const mdStrongFilename = require('markdown-it')();
 const mdHasNumClass = require('markdown-it')();
+const mdBLabel = require('markdown-it')();
+const mdStrongLabel = require('markdown-it')();
+const mdJointSpaceUseHalfWidth = require('markdown-it')();
 
 const captions = require('../index.js');
 
@@ -12,6 +15,9 @@ mdClassPrefix.use(captions, {classPrefix: 'f'});
 mdDquoteFilename.use(captions, {dquoteFilename: true});
 mdStrongFilename.use(captions, {strongFilename: true});
 mdHasNumClass.use(captions, {hasNumClass: true});
+mdBLabel.use(captions, {bLabel: true});
+mdStrongLabel.use(captions, {strongLabel: true});
+mdJointSpaceUseHalfWidth.use(captions, {jointSpaceUseHalfWidth: true});
 
 const ms = [
   [
@@ -294,6 +300,30 @@ const msHasNumClass = [
   ],
 ];
 
+const msBLabel = [
+  [
+    'Code. Call a cat.',
+    '<p class="caption-pre-code"><b class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></b> Call a cat.</p>\n'
+  ],
+];
+const msStrongLabel = [
+  [
+    'Code. Call a cat.',
+    '<p class="caption-pre-code"><strong class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></strong> Call a cat.</p>\n'
+  ],
+];
+const msJointSpaceUseHalfWidth = [
+  [
+    '図 キャプション',
+    '<p class="caption-img"><span class="caption-img-label">図</span> キャプション</p>\n'
+  ],
+  [
+    '図　キャプション',
+    '<p class="caption-img"><span class="caption-img-label">図</span> キャプション</p>\n'
+  ],
+];
+
+
 
 let n = 0;
 while(n < ms.length) {
@@ -352,6 +382,43 @@ while(n < msHasNumClass.length) {
   } catch(e) {
     console.log('Incorrect: ')
     console.log('M: ' + msHasNumClass[n][0] + '\nH: ' + hHasNumClass +'C: ' + msHasNumClass[n][1]);
+  };
+  n++;
+}
+
+n = 0;
+while(n < msBLabel.length) {
+  console.log('Test(msBLabel): ' + n);
+  const hBLabel = mdBLabel.render(msBLabel[n][0]);
+  try {
+    assert.strictEqual(hBLabel, msBLabel[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msBLabel[n][0] + '\nH: ' + hBLabel +'C: ' + msBLabel[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msStrongLabel.length) {
+  console.log('Test(msBLabel): ' + n);
+  const hStrongLabel = mdStrongLabel.render(msBLabel[n][0]);
+  try {
+    assert.strictEqual(hStrongLabel, msStrongLabel[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msStrongLabel[n][0] + '\nH: ' + hStrongLabel +'C: ' + msStrongLabel[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msJointSpaceUseHalfWidth.length) {
+  console.log('Test(msJointSpaceUseHalfWidth): ' + n);
+  const hJointSpaceUseHalfWidth = mdJointSpaceUseHalfWidth.render(msJointSpaceUseHalfWidth[n][0]);
+  try {
+    assert.strictEqual(hJointSpaceUseHalfWidth, msJointSpaceUseHalfWidth[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msJointSpaceUseHalfWidth[n][0] + '\nH: ' + hJointSpaceUseHalfWidth +'C: ' + msJointSpaceUseHalfWidth[n][1]);
   };
   n++;
 }

@@ -199,3 +199,33 @@ const src = 'Code 1. A caption.\n';
 console.log(md.render(src));
 //<p class="caption-pre-code"><span class="caption-pre-code-label label-has-num">Code 1<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>\n'
 ```
+
+## Option: Use b/strong element for label
+
+```js
+md.use(captions, {bLabel: true});
+
+const src = 'Code 1. A caption.\n';
+console.log(md.render(src));
+//<p class="caption-pre-code"><b class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">.</span></b> A caption.</p>\n'
+```
+
+```js
+md.use(captions, {strongLabel: true});
+
+const src = 'Code 1. A caption.\n';
+console.log(md.render(src));
+//<p class="caption-pre-code"><strong class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">.</span></strong> A caption.</p>\n'
+```
+
+## Option: Convert full-width space in label joint to half-width
+
+
+```js
+md.use(captions, {jointSpaceUseHalfWidth: true});
+
+const src = '図　キャプション\n';
+console.log(md.render(src));
+//<p class="caption-img"><span class="caption-img-label">Code 1<span class="caption-img-label-joint"> </span></span>キャプション</p>\n'
+```
+
