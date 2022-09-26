@@ -220,11 +220,24 @@ console.log(md.render(src));
 
 ## Option: Convert full-width space in label joint to half-width
 
-
 ```js
 md.use(captions, {jointSpaceUseHalfWidth: true});
 
 const src = '図　キャプション\n';
 console.log(md.render(src));
 //<p class="caption-img"><span class="caption-img-label">図</span> キャプション</p>\n'
+```
+
+## Option: Remove unnumbered Label
+
+```js
+md.use(captions, {removeUnnumberedLabel: true});
+
+const src1 = '図　キャプション\n';
+console.log(md.render(src1));
+//<p class="caption-img">キャプション</p>\n'
+
+const src2 = '図1　キャプション\n';
+console.log(md.render(src2));
+//<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>キャプション</p>\n'
 ```

@@ -7,6 +7,7 @@ const mdHasNumClass = require('markdown-it')();
 const mdBLabel = require('markdown-it')();
 const mdStrongLabel = require('markdown-it')();
 const mdJointSpaceUseHalfWidth = require('markdown-it')();
+const mdRemoveUnnumberedLabel = require('markdown-it')();
 
 const captions = require('../index.js');
 
@@ -18,6 +19,7 @@ mdHasNumClass.use(captions, {hasNumClass: true});
 mdBLabel.use(captions, {bLabel: true});
 mdStrongLabel.use(captions, {strongLabel: true});
 mdJointSpaceUseHalfWidth.use(captions, {jointSpaceUseHalfWidth: true});
+mdRemoveUnnumberedLabel.use(captions, {removeUnnumberedLabel: true});
 
 const ms = [
   [
@@ -322,12 +324,50 @@ const msJointSpaceUseHalfWidth = [
     '<p class="caption-img"><span class="caption-img-label">図</span> キャプション</p>\n'
   ],
 ];
+const msRemoveUnnumberedLabel = [
+  [
+    'Figure. A caption.',
+    '<p class="caption-img">A caption.</p>\n'
+  ],
+  [
+    'Figure: A caption.',
+    '<p class="caption-img">A caption.</p>\n'
+  ],
+  [
+    'Figure 1. A caption.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A caption.</p>\n'
+  ],
+  [
+    '図 キャプション',
+    '<p class="caption-img">キャプション</p>\n'
+  ],
+  [
+    '図　キャプション',
+    '<p class="caption-img">キャプション</p>\n'
+  ],
+  [
+    '図：キャプション',
+    '<p class="caption-img">キャプション</p>\n'
+  ],
+  [
+    '図1 キャプション',
+    '<p class="caption-img"><span class="caption-img-label">図1</span> キャプション</p>\n'
+  ],
+  [
+    '図1　キャプション',
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>キャプション</p>\n'
+  ],
+  [
+    '図1：キャプション',
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">：</span></span>キャプション</p>\n'
+  ],
+];
 
 
 
 let n = 0;
 while(n < ms.length) {
-  console.log('Test(ms): ' + n);
+  console.log('Test(default): ' + n);
   const h = mdDefault.render(ms[n][0]);
   try {
     assert.strictEqual(h, ms[n][1]);
@@ -339,7 +379,7 @@ while(n < ms.length) {
 }
 n = 0;
 while(n < msCP.length) {
-  console.log('Test(msCP): ' + n);
+  console.log('Test(classPrefix): ' + n);
   const hCP =   mdClassPrefix.render(msCP[n][0]);
   try {
     assert.strictEqual(hCP, msCP[n][1]);
@@ -351,7 +391,7 @@ while(n < msCP.length) {
 }
 n = 0;
 while(n < msDquoteFilename.length) {
-  console.log('Test(msFilename): ' + n);
+  console.log('Test(filename): ' + n);
   const hDquoteFilename = mdDquoteFilename.render(msDquoteFilename[n][0]);
   try {
     assert.strictEqual(hDquoteFilename, msDquoteFilename[n][1]);
@@ -363,7 +403,7 @@ while(n < msDquoteFilename.length) {
 }
 n = 0;
 while(n < msStrongFilename.length) {
-  console.log('Test(msStrongFilename): ' + n);
+  console.log('Test(strongFilename): ' + n);
   const hStrongFilename = mdStrongFilename.render(msStrongFilename[n][0]);
   try {
     assert.strictEqual(hStrongFilename, msStrongFilename[n][1]);
@@ -375,7 +415,7 @@ while(n < msStrongFilename.length) {
 }
 n = 0;
 while(n < msHasNumClass.length) {
-  console.log('Test(mshasNumClass): ' + n);
+  console.log('Test(hasNumClass): ' + n);
   const hHasNumClass = mdHasNumClass.render(msHasNumClass[n][0]);
   try {
     assert.strictEqual(hHasNumClass, msHasNumClass[n][1]);
@@ -388,7 +428,7 @@ while(n < msHasNumClass.length) {
 
 n = 0;
 while(n < msBLabel.length) {
-  console.log('Test(msBLabel): ' + n);
+  console.log('Test(bLabel): ' + n);
   const hBLabel = mdBLabel.render(msBLabel[n][0]);
   try {
     assert.strictEqual(hBLabel, msBLabel[n][1]);
@@ -400,7 +440,7 @@ while(n < msBLabel.length) {
 }
 n = 0;
 while(n < msStrongLabel.length) {
-  console.log('Test(msBLabel): ' + n);
+  console.log('Test(strongLabel): ' + n);
   const hStrongLabel = mdStrongLabel.render(msBLabel[n][0]);
   try {
     assert.strictEqual(hStrongLabel, msStrongLabel[n][1]);
@@ -412,7 +452,7 @@ while(n < msStrongLabel.length) {
 }
 n = 0;
 while(n < msJointSpaceUseHalfWidth.length) {
-  console.log('Test(msJointSpaceUseHalfWidth): ' + n);
+  console.log('Test(jointSpaceUseHalfWidth): ' + n);
   const hJointSpaceUseHalfWidth = mdJointSpaceUseHalfWidth.render(msJointSpaceUseHalfWidth[n][0]);
   try {
     assert.strictEqual(hJointSpaceUseHalfWidth, msJointSpaceUseHalfWidth[n][1]);
@@ -422,4 +462,17 @@ while(n < msJointSpaceUseHalfWidth.length) {
   };
   n++;
 }
+n = 0;
+while(n < msRemoveUnnumberedLabel.length) {
+  console.log('Test(removeUnnumberedLabel): ' + n);
+  const hRemoveUnnumberedLabel = mdRemoveUnnumberedLabel.render(msRemoveUnnumberedLabel[n][0]);
+  try {
+    assert.strictEqual(hRemoveUnnumberedLabel, msRemoveUnnumberedLabel[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msRemoveUnnumberedLabel[n][0] + '\nH: ' + hRemoveUnnumberedLabel +'C: ' + msRemoveUnnumberedLabel[n][1]);
+  };
+  n++;
+}
+
 

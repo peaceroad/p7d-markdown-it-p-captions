@@ -9,6 +9,7 @@ function convertToCaption(state, option) {
     bLabel: false,
     strongLabel: false,
     jointSpaceUseHalfWidth: false,
+    removeUnnumberedLabel: false,
   };
   if (option !== undefined) {
     for (let o in option) {
@@ -77,17 +78,15 @@ function convertToCaption(state, option) {
     for (let mark of Object.keys(markReg)) {
       const hasMarkLabel = nextToken.content.match(markReg[mark]);
       if (hasMarkLabel) {
-        if (opt.hasNumClass) {
-          let i = 1;
-          while (i < 6) {
-            if (hasMarkLabel[i] !== undefined) {
-              actualNum = hasMarkLabel[i];
-              break;
-            }
-            i++;
+        let i = 1;
+        while (i < 6) {
+          if (hasMarkLabel[i] !== undefined) {
+            actualNum = hasMarkLabel[i];
+            break;
           }
-          //console.log('actualNum: ' + actualNum);
+          i++;
         }
+        //console.log('actualNum: ' + actualNum);
         token.attrJoin('class', opt.classPrefix + '-' + mark);
         actualLabel = hasMarkLabel[0];
         actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + '|)$'));
@@ -115,14 +114,11 @@ function convertToCaption(state, option) {
 }
 
 function actualLabelContent (actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt) {
-  if (actualLabelJoint) {
-    return actualLabel.replace(new RegExp('\\\\' + actualLabelJoint + '$'), '');
-  } else {
-    if (convertJointSpaceFullWith) {
-      actualLabel = actualLabel.replace(/　$/, '');
-    }
-    return actualLabel;
+  actualLabel = actualLabel.replace(new RegExp('\\\\' + actualLabelJoint + '$'), '');
+  if (convertJointSpaceFullWith) {
+    actualLabel = actualLabel.replace(/　$/, '');
   }
+  return actualLabel;
 }
 
 function markFilename (state, nextToken, mark, opt) {
@@ -148,15 +144,18 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
   if (opt.bLabel) labelTag = 'b';
   if (opt.strongLabel) labelTag = 'strong';
 
-  const labelTokenFirst = new state.Token('text', '', 0);
-  const labelTokenOpen = new state.Token(labelTag + '_open', labelTag, 1);
-  labelTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-label');
+  const labelToken = {
+    first: new state.Token('text', '', 0),
+    open: new state.Token(labelTag + '_open', labelTag, 1),
+    content: new state.Token('text', '', 0),
+    close: new state.Token(labelTag + '_close', labelTag, -1),
+  };
+
+  labelToken.open.attrSet('class', opt.classPrefix + '-' + mark + '-label');
   if (opt.hasNumClass && actualNum) {
-    labelTokenOpen.attrJoin('class', 'label-has-num');
+    labelToken.open.attrJoin('class', 'label-has-num');
   }
-  const labelTokenContent = new state.Token('text', '', 0);
-  labelTokenContent.content = actualLabelContent(actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt);
-  const labelTokenClose = new state.Token(labelTag + '_close', labelTag, -1);
+  labelToken.content.content = actualLabelContent(actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt);
 
   nextToken.children[0].content = nextToken.children[0].content.replace(actualLabel, '');
   if (convertJointSpaceFullWith) {
@@ -179,21 +178,33 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
     }
   }
 
-  nextToken.children.splice(0, 0, labelTokenFirst, labelTokenOpen, labelTokenContent, labelTokenClose);
+  if (opt.removeUnnumberedLabel) {
+    if (actualNum) {
+      modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+    } else {
+      nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
+    }
+  } else {
+    modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+  }
+  return true;
+}
 
-  // Add label joint span.
+function modifyLabel (state, nextToken, mark, labelToken, actualLabelJoint, opt) {
+  nextToken.children.splice(0, 0, labelToken.first, labelToken.open, labelToken.content, labelToken.close);
   if (!actualLabelJoint) { return; }
   nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(actualLabelJoint + ' *$'), '');
 
-  const labelJointTokenOpen = new state.Token('span_open', 'span', 1);
-  labelJointTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-label-joint');
-  const labelJointTokenContent = new state.Token('text', '', 0);
-  labelJointTokenContent.content = actualLabelJoint;
-  const labelJointTokenClose = new state.Token('span_close', 'span', -1);
+  const labelJointToken = {
+    open: new state.Token('span_open', 'span', 1),
+    content: new state.Token('text', '', 0),
+    close: new state.Token('span_close', 'span', -1),
+  };
+  labelJointToken.open.attrSet('class', opt.classPrefix + '-' + mark + '-label-joint');
+  labelJointToken.content.content = actualLabelJoint;
 
-  nextToken.children.splice(3, 0, labelJointTokenOpen, labelJointTokenContent, labelJointTokenClose);
-
-  return true;
+  nextToken.children.splice(3, 0, labelJointToken.open, labelJointToken.content, labelJointToken.close);
+  return;
 }
 
 module.exports = function plugin(md, option) {
