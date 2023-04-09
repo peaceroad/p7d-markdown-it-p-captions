@@ -154,6 +154,9 @@ const ms = [
   ], [
     'リスト1 キャプション',
     '<p class="caption-pre-code"><span class="caption-pre-code-label">リスト1</span> キャプション</p>\n'
+  ], [
+    'Source. A paper.',
+    '<p class="caption-blockquote"><span class="caption-blockquote-label">Source<span class="caption-blockquote-label-joint">.</span></span> A paper.</p>\n'
   ]
 ];
 

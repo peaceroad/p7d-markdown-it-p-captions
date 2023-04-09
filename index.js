@@ -61,7 +61,7 @@ function convertToCaption(state, option) {
     ')'),
     //quote, blockquote
     "blockquote": new RegExp('^(?:' +
-      '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE])'+ markAfterEn + '|' +
+      '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE])'+ markAfterEn + '|' +
       '(?:引用(?:元)?|出典)' + markAfterJa +
     ')')
   };
