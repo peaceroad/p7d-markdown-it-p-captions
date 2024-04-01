@@ -9,6 +9,7 @@ const mdStrongLabel = require('markdown-it')();
 const mdJointSpaceUseHalfWidth = require('markdown-it')();
 const mdRemoveUnnumberedLabel = require('markdown-it')();
 const mdRemoveUnnumberedLabelExceptBlockquote = require('markdown-it')();
+const mdRemoveUnnumberedLabelExceptMarks = require('markdown-it')();
 
 const captions = require('../index.js');
 
@@ -22,6 +23,10 @@ mdStrongLabel.use(captions, {strongLabel: true});
 mdJointSpaceUseHalfWidth.use(captions, {jointSpaceUseHalfWidth: true});
 mdRemoveUnnumberedLabel.use(captions, {removeUnnumberedLabel: true});
 mdRemoveUnnumberedLabelExceptBlockquote.use(captions, {removeUnnumberedLabelExceptMarks: ['blockquote']});
+mdRemoveUnnumberedLabelExceptMarks.use(captions, {
+  removeUnnumberedLabel: true,
+  removeUnnumberedLabelExceptMarks: ['blockquote'],
+});
 
 const ms = [
   [
@@ -381,6 +386,24 @@ const msRemoveUnnumberedLabelExceptBlockquote = [
   ],
   [
     'Figure: A caption.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span> A caption.</p>\n'
+  ],
+  [
+    'Figure 1. A caption.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A caption.</p>\n'
+  ],
+];
+const msRemoveUnnumberedLabelExceptMarks = [
+  [
+    'Source. A caption.',
+    '<p class="caption-blockquote"><span class="caption-blockquote-label">Source<span class="caption-blockquote-label-joint">.</span></span> A caption.</p>\n'
+  ],
+  [
+    '出典　キャプション',
+    '<p class="caption-blockquote"><span class="caption-blockquote-label">出典<span class="caption-blockquote-label-joint">　</span></span>キャプション</p>\n'
+  ],
+  [
+    'Figure: A caption.',
     '<p class="caption-img">A caption.</p>\n'
   ],
   [
@@ -509,6 +532,18 @@ while(n < msRemoveUnnumberedLabelExceptBlockquote.length) {
   } catch(e) {
     console.log('Incorrect: ')
     console.log('M: ' + msRemoveUnnumberedLabelExceptBlockquote[n][0] + '\nH: ' + hRemoveUnnumberedLabelExceptBlockquote +'C: ' + msRemoveUnnumberedLabelExceptBlockquote[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msRemoveUnnumberedLabelExceptMarks.length) {
+  console.log('Test(removeUnnumberedLabelExceptMarks): ' + n);
+  const hRemoveUnnumberedLabelExceptMarks = mdRemoveUnnumberedLabelExceptMarks.render(msRemoveUnnumberedLabelExceptMarks[n][0]);
+  try {
+    assert.strictEqual(hRemoveUnnumberedLabelExceptMarks, msRemoveUnnumberedLabelExceptMarks[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msRemoveUnnumberedLabelExceptMarks[n][0] + '\nH: ' + hRemoveUnnumberedLabelExceptMarks +'C: ' + msRemoveUnnumberedLabelExceptMarks[n][1]);
   };
   n++;
 }

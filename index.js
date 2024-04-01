@@ -184,10 +184,10 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
     }
   }
 
-    if (actualNum) {
+  if (actualNum) {
     modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
   } else {
-    if (opt.removeUnnumberedLabel || opt.removeUnnumberedLabelExceptMarks.length > 0) {
+    if (opt.removeUnnumberedLabel) {
       if (opt.removeUnnumberedLabelExceptMarks.length > 0) {
         let isExceptMark = false
         for (let exceptMark of opt.removeUnnumberedLabelExceptMarks) {
@@ -201,7 +201,7 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
         } else {
           nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
         }
-      } else if (opt.removeUnnumberedLabel) {
+      } else {
         nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
       }
     } else {

@@ -246,7 +246,10 @@ console.log(md.render(src2));
 ## Option: removeUnnumberedLabelExceptMarks
 
 ```js
-md.use(captions, {removeUnnumberedLabelExceptMarks: ["blockquote"]});
+md.use(captions, {
+  removeUnnumberedLabel: true,
+  removeUnnumberedLabelExceptMarks: ["blockquote"],
+});
 
 const src1 = '図　キャプション\n';
 console.log(md.render(src1));
