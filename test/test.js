@@ -8,6 +8,7 @@ const mdBLabel = require('markdown-it')();
 const mdStrongLabel = require('markdown-it')();
 const mdJointSpaceUseHalfWidth = require('markdown-it')();
 const mdRemoveUnnumberedLabel = require('markdown-it')();
+const mdRemoveUnnumberedLabelExceptBlockquote = require('markdown-it')();
 
 const captions = require('../index.js');
 
@@ -20,6 +21,7 @@ mdBLabel.use(captions, {bLabel: true});
 mdStrongLabel.use(captions, {strongLabel: true});
 mdJointSpaceUseHalfWidth.use(captions, {jointSpaceUseHalfWidth: true});
 mdRemoveUnnumberedLabel.use(captions, {removeUnnumberedLabel: true});
+mdRemoveUnnumberedLabelExceptBlockquote.use(captions, {removeUnnumberedLabelExceptMarks: ['blockquote']});
 
 const ms = [
   [
@@ -157,7 +159,10 @@ const ms = [
   ], [
     'Source. A paper.',
     '<p class="caption-blockquote"><span class="caption-blockquote-label">Source<span class="caption-blockquote-label-joint">.</span></span> A paper.</p>\n'
-  ]
+  ], [
+    'Slide. a slide.',
+    '<p class="caption-slide"><span class="caption-slide-label">Slide<span class="caption-slide-label-joint">.</span></span> a slide.</p>\n'
+  ],
 ];
 
 const msCP = [
@@ -302,7 +307,7 @@ const msHasNumClass = [
   ], [
     'Figure 12. a cat.',
     '<p class="caption-img"><span class="caption-img-label label-has-num">Figure 12<span class="caption-img-label-joint">.</span></span> a cat.</p>\n'
-  ],
+  ]
 ];
 
 const msBLabel = [
@@ -363,6 +368,20 @@ const msRemoveUnnumberedLabel = [
   [
     '図1：キャプション',
     '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">：</span></span>キャプション</p>\n'
+  ],
+];
+const msRemoveUnnumberedLabelExceptBlockquote = [
+  [
+    'Source. A caption.',
+    '<p class="caption-blockquote"><span class="caption-blockquote-label">Source<span class="caption-blockquote-label-joint">.</span></span> A caption.</p>\n'
+  ],
+  [
+    'Figure: A caption.',
+    '<p class="caption-img">A caption.</p>\n'
+  ],
+  [
+    'Figure 1. A caption.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A caption.</p>\n'
   ],
 ];
 
@@ -474,6 +493,18 @@ while(n < msRemoveUnnumberedLabel.length) {
   } catch(e) {
     console.log('Incorrect: ')
     console.log('M: ' + msRemoveUnnumberedLabel[n][0] + '\nH: ' + hRemoveUnnumberedLabel +'C: ' + msRemoveUnnumberedLabel[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msRemoveUnnumberedLabelExceptBlockquote.length) {
+  console.log('Test(removeUnnumberedLabelExceptBlockquote): ' + n);
+  const hRemoveUnnumberedLabelExceptBlockquote = mdRemoveUnnumberedLabelExceptBlockquote.render(msRemoveUnnumberedLabelExceptBlockquote[n][0]);
+  try {
+    assert.strictEqual(hRemoveUnnumberedLabelExceptBlockquote, msRemoveUnnumberedLabelExceptBlockquote[n][1]);
+  } catch(e) {
+    console.log('Incorrect: ')
+    console.log('M: ' + msRemoveUnnumberedLabelExceptBlockquote[n][0] + '\nH: ' + hRemoveUnnumberedLabelExceptBlockquote +'C: ' + msRemoveUnnumberedLabelExceptBlockquote[n][1]);
   };
   n++;
 }

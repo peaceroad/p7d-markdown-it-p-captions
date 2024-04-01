@@ -10,6 +10,7 @@ function convertToCaption(state, option) {
     strongLabel: false,
     jointSpaceUseHalfWidth: false,
     removeUnnumberedLabel: false,
+    removeUnnumberedLabelExceptMarks: [],
   };
   if (option !== undefined) {
     for (let o in option) {
@@ -59,10 +60,15 @@ function convertToCaption(state, option) {
       '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
       '(?:端末|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
     ')'),
-    //quote, blockquote
+    //quote, blockquote, source
     "blockquote": new RegExp('^(?:' +
       '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE])'+ markAfterEn + '|' +
       '(?:引用(?:元)?|出典)' + markAfterJa +
+    ')'),
+    //slide
+    "slide": new RegExp('^(?:' +
+      '(?:[sS][lL][iI][dD][eE])'+ markAfterEn + '|' +
+      '(?:スライド)' + markAfterJa +
     ')')
   };
 
@@ -178,14 +184,31 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
     }
   }
 
-  if (opt.removeUnnumberedLabel) {
-    if (actualNum) {
-      modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
-    } else {
-      nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
-    }
-  } else {
+  console.log(opt.removeUnnumberedLabel, opt.removeUnnumberedLabelExceptMarks)
+  if (actualNum) {
     modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+  } else {
+    if (opt.removeUnnumberedLabel || opt.removeUnnumberedLabelExceptMarks.length > 0) {
+      if (opt.removeUnnumberedLabelExceptMarks.length > 0) {
+        let isExceptMark = false
+        for (let exceptMark of opt.removeUnnumberedLabelExceptMarks) {
+          if (exceptMark === mark) {
+            isExceptMark = true
+            break
+          }
+        }
+        console.log(mark, isExceptMark)
+        if (isExceptMark) {
+          modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+        } else {
+          nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
+        }
+      } else if (opt.removeUnnumberedLabel) {
+        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
+      }
+    } else {
+      modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+    }
   }
   return true;
 }
