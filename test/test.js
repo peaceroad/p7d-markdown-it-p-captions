@@ -376,6 +376,10 @@ const msRemoveUnnumberedLabelExceptBlockquote = [
     '<p class="caption-blockquote"><span class="caption-blockquote-label">Source<span class="caption-blockquote-label-joint">.</span></span> A caption.</p>\n'
   ],
   [
+    '出典　キャプション',
+    '<p class="caption-blockquote"><span class="caption-blockquote-label">出典<span class="caption-blockquote-label-joint">　</span></span>キャプション</p>\n'
+  ],
+  [
     'Figure: A caption.',
     '<p class="caption-img">A caption.</p>\n'
   ],

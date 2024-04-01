@@ -32,6 +32,7 @@ console.log(md.render(src));
 | `caption-pre-code` | code, codeblock, program, algorithm, コード, ソースコード, リスト, 命令, プログラム, 算譜, アルゴリズム, 算法 |
 | `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト |
 | `caption-blockquote` | source, quote, blockquote, 引用, 引用元, 出典 |
+| `caption-slide`| slide, スライド |
 
 In addition, a delimiter is required after these strings, and then one space is needed. If the character string is Japanese, half-width spaces only are allowed.
 
@@ -240,4 +241,18 @@ console.log(md.render(src1));
 const src2 = '図1　キャプション\n';
 console.log(md.render(src2));
 //<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>キャプション</p>\n'
+```
+
+## Option: removeUnnumberedLabelExceptMarks
+
+```js
+md.use(captions, {removeUnnumberedLabelExceptMarks: ["blockquote"]});
+
+const src1 = '図　キャプション\n';
+console.log(md.render(src1));
+//<p class="caption-img">キャプション</p>\n'
+
+const src2 = '出典　キャプション\n';
+console.log(md.render(src2));
+//<p class="caption-blockquote"><span class="caption-blockquote-label">出典<span class="caption-blockquote-label-joint">　</span></span>キャプション</p>\n'
 ```

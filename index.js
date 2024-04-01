@@ -184,8 +184,7 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
     }
   }
 
-  console.log(opt.removeUnnumberedLabel, opt.removeUnnumberedLabelExceptMarks)
-  if (actualNum) {
+    if (actualNum) {
     modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
   } else {
     if (opt.removeUnnumberedLabel || opt.removeUnnumberedLabelExceptMarks.length > 0) {
@@ -197,7 +196,6 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
             break
           }
         }
-        console.log(mark, isExceptMark)
         if (isExceptMark) {
           modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
         } else {
