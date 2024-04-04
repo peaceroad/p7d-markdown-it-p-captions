@@ -66,6 +66,12 @@ const ms = [
     'Figure A A cat.',
     '<p class="caption-img"><span class="caption-img-label">Figure A</span> A cat.</p>\n'
   ], [
+    'Figure A a cat.',
+    '<p>Figure A a cat.</p>\n'
+  ], [
+    'Figure A a Cat.',
+    '<p>Figure A a Cat.</p>\n'
+  ] , [
     'Figure 1 A cat.',
     '<p class="caption-img"><span class="caption-img-label">Figure 1</span> A cat.</p>\n'
   ], [
@@ -74,6 +80,9 @@ const ms = [
   ], [
     'Figure 1: A cat.',
     '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
+  ], [
+    'Figure 1. a cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> a cat.</p>\n'
   ], [
     '図',
     '<p>図</p>\n'
@@ -133,7 +142,7 @@ const ms = [
     '<p class="caption-img"><span class="caption-img-label">図A<span class="caption-img-label-joint">.</span></span> a cat.</p>\n'
   ], [
     '図A a cat.',
-    '<p class="caption-img"><span class="caption-img-label">図A</span> a cat.</p>\n'
+    '<p>図A a cat.</p>\n'
   ], [
     'Figure.A A cat.',
     '<p class="caption-img"><span class="caption-img-label">Figure.A</span> A cat.</p>\n'
