@@ -24,6 +24,8 @@ console.log(md.render(src));
 // <p class="f-img"><span class="f-img-label">Figure 1<span class="f-img-label-joint">.</span></span> A caption.</p>
 ```
 
+First, the strings listed in the table below are required as the first string of a paragraph to be determined as a caption.
+
 | class attribute value | Character string at the beginning of a paragraph (uppercase or lowercase) |
 | ---- | ---- |
 | `caption-img` | fig, figure, illust, photo, 図, イラスト, 写真 |
@@ -34,7 +36,7 @@ console.log(md.render(src));
 | `caption-blockquote` | source, quote, blockquote, 引用, 引用元, 出典 |
 | `caption-slide`| slide, スライド |
 
-In addition, a delimiter is required after these strings, and then one space is needed. If the character string is Japanese, half-width spaces only are allowed.
+Additionally, a delimiter is required after these strings (`[.:．.:　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese, only half-width spaces can be used as delimiters.
 
 ```md
 Fig. A caption

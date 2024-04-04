@@ -71,9 +71,12 @@ const ms = [
   ], [
     'Figure A a Cat.',
     '<p>Figure A a Cat.</p>\n'
-  ] , [
+  ], [
     'Figure 1 A cat.',
     '<p class="caption-img"><span class="caption-img-label">Figure 1</span> A cat.</p>\n'
+  ], [
+    'Figure 1.A.1 A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1.A.1</span> A cat.</p>\n'
   ], [
     'Figure 1 a cat.',
     '<p>Figure 1 a cat.</p>\n'
@@ -101,6 +104,9 @@ const ms = [
   ], [
     '図 猫',
     '<p class="caption-img"><span class="caption-img-label">図</span> 猫</p>\n'
+  ], [
+    '図　猫',
+    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">　</span></span>猫</p>\n'
   ], [
     '図1　猫',
     '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>猫</p>\n'
@@ -143,6 +149,9 @@ const ms = [
   ], [
     '図A a cat.',
     '<p>図A a cat.</p>\n'
+  ], [
+    '図A　a cat.',
+    '<p class="caption-img"><span class="caption-img-label">図A<span class="caption-img-label-joint">　</span></span>a cat.</p>\n'
   ], [
     'Figure.A A cat.',
     '<p class="caption-img"><span class="caption-img-label">Figure.A</span> A cat.</p>\n'
@@ -203,8 +212,10 @@ const ms = [
   ], [
     'Code 猫',
     '<p class="caption-pre-code"><span class="caption-pre-code-label">Code</span> 猫</p>\n'
+  ], [
+    'fig 1. Test Caption',
+    '<p class="caption-img"><span class="caption-img-label">fig 1<span class="caption-img-label-joint">.</span></span> Test Caption</p>\n'
   ],
-
 ];
 
 const msCP = [
