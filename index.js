@@ -28,7 +28,7 @@ function convertToCaption(state, option) {
     ' *(?:' + 
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
       jointFullWidth +
-      '|(?=[ ]+[^0-9a-zA-Z.-])' +
+      '|(?=[ ]+[^0-9a-zA-Z])' +
     ')|' +
     ' *' + '(' + markAfterNum + ')(?:' +
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
