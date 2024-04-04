@@ -20,17 +20,19 @@ function convertToCaption(state, option) {
 
   let n = 0;
   const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}';
-  const markAfterNumAfterJoint = '[.:．。：　]';
+  const joint = '[.:．。：　]';
+  const jointFullWidth = '[．。：　]';
+  const jointHalfWidth = '[.:]';
 
   const markAfterEn = '(?:' +
-    '[ 　]*' + markAfterNumAfterJoint + '(?:(?=[ ]+)|$)|' +
-    '[ 　]*(' + markAfterNum + ')' + markAfterNumAfterJoint + '(?:(?=[ ]+)|$)|' +
-    '[ 　]*(' + markAfterNum + ')(?:(?=[ 　]+[^a-z])|$)|' +
-    '[.](' + markAfterNum + ')(?:(?=[ 　]+[^a-z])|$)' +
+    '[ ]*(?:' + jointHalfWidth + '(?:(?=[ ]+)|$)|' + jointFullWidth + ')|' +
+    '[ ]*(' + markAfterNum + ')(?:' + jointHalfWidth + '(?:(?=[ ]+)|$)|' + jointFullWidth + ')|' +
+    '[ ]*(' + markAfterNum + ')(?:' + jointFullWidth + '|(?=[ ]+[^a-z])|$)|' +
+    '[.](' + markAfterNum + ')(?:' + jointFullWidth + '|(?=[ ]+[^a-z])|$)' +
   ')';
-  const markAfterJa = '(?:' +
-    '[ 　]*(?:' + markAfterNumAfterJoint + '|(?=[ ]))|' +
-    '[ 　]*(' + markAfterNum + ')(?:' + markAfterNumAfterJoint + '(?:(?=[ ])|$))|' +
+const markAfterJa = '(?:' +
+    '[ 　]*(?:' + joint + '|(?=[ ]))|' +
+    '[ 　]*(' + markAfterNum + ')(?:' + joint + '(?:(?=[ ])|$))|' +
     '[ 　]*(' + markAfterNum + ')(?:[:。．:：　]|(?=[ ])|$)' +
   ')';
 
@@ -95,7 +97,7 @@ function convertToCaption(state, option) {
         //console.log('actualNum: ' + actualNum);
         token.attrJoin('class', opt.classPrefix + '-' + mark);
         actualLabel = hasMarkLabel[0];
-        actualLabelJoint = actualLabel.match(new RegExp('(' + markAfterNumAfterJoint + '|)$'));
+        actualLabelJoint = actualLabel.match(new RegExp('(' + joint + '|)$'));
         if(actualLabelJoint) {
           actualLabelJoint = actualLabelJoint[1];
         }

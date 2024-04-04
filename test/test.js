@@ -167,7 +167,35 @@ const ms = [
   ], [
     'Slide. a slide.',
     '<p class="caption-slide"><span class="caption-slide-label">Slide<span class="caption-slide-label-joint">.</span></span> a slide.</p>\n'
+  ], [
+    'Code 1 A cat.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1</span> A cat.</p>\n'
+  ], [
+    'Code 1　猫',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">　</span></span>猫</p>\n'
+  ], [
+    'Code 1 猫',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1</span> 猫</p>\n'
+  ], [
+    'Code 1. 猫',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">.</span></span> 猫</p>\n'
+  ], [
+    'Code 1。猫',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">。</span></span>猫</p>\n'
+  ] , [
+    'Code.1　猫',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code.1<span class="caption-pre-code-label-joint">　</span></span>猫</p>\n'
+  ], [
+    'Code. 猫',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> 猫</p>\n'
+  ], [
+    'Code　猫',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">　</span></span>猫</p>\n'
+  ], [
+    'Code 猫',
+    '<p>Code 猫</p>\n'
   ],
+
 ];
 
 const msCP = [
@@ -547,5 +575,3 @@ while(n < msRemoveUnnumberedLabelExceptMarks.length) {
   };
   n++;
 }
-
-
