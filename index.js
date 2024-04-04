@@ -25,15 +25,24 @@ function convertToCaption(state, option) {
   const jointHalfWidth = '[.:]';
 
   const markAfterEn = '(?:' +
-    '[ ]*(?:' + jointHalfWidth + '(?:(?=[ ]+)|$)|' + jointFullWidth + ')|' +
-    '[ ]*(' + markAfterNum + ')(?:' + jointHalfWidth + '(?:(?=[ ]+)|$)|' + jointFullWidth + ')|' +
-    '[ ]*(' + markAfterNum + ')(?:' + jointFullWidth + '|(?=[ ]+[^a-z])|$)|' +
-    '[.](' + markAfterNum + ')(?:' + jointFullWidth + '|(?=[ ]+[^a-z])|$)' +
-  ')';
-const markAfterJa = '(?:' +
-    '[ 　]*(?:' + joint + '|(?=[ ]))|' +
-    '[ 　]*(' + markAfterNum + ')(?:' + joint + '(?:(?=[ ])|$))|' +
-    '[ 　]*(' + markAfterNum + ')(?:[:。．:：　]|(?=[ ])|$)' +
+    ' *(?:' + 
+      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+      jointFullWidth +
+      '|(?=[ ]+[^0-9a-zA-Z.-])' +
+    ')|' +
+    ' *' + '(' + markAfterNum + ')(?:' +
+      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+      jointFullWidth + '|' +
+      '(?=[ ]+[^a-z])|$' +
+    ')|' +
+    '[.](' + markAfterNum + ')(?:' +
+      joint + '|(?=[ ]+[^a-z])|$)' +
+    ')';
+
+  const markAfterJa = '(?:' +
+    ' *(?:' + joint + '|(?=[ ]))|' +
+    ' *(' + markAfterNum + ')(?:' + joint + '(?:(?=[ ])|$))|' +
+    ' *(' + markAfterNum + ')(?:[:。．:：　]|(?=[ ])|$)' +
   ')';
 
   const markReg = {

@@ -193,7 +193,7 @@ const ms = [
     '<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">　</span></span>猫</p>\n'
   ], [
     'Code 猫',
-    '<p>Code 猫</p>\n'
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code</span> 猫</p>\n'
   ],
 
 ];
@@ -454,6 +454,7 @@ while(n < ms.length) {
   };
   n++;
 }
+
 n = 0;
 while(n < msCP.length) {
   console.log('Test(classPrefix): ' + n);
