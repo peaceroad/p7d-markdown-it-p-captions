@@ -215,6 +215,12 @@ const ms = [
   ], [
     'fig 1. Test Caption',
     '<p class="caption-img"><span class="caption-img-label">fig 1<span class="caption-img-label-joint">.</span></span> Test Caption</p>\n'
+  ], [
+    'Code Testキャプション',
+    '<p>Code Testキャプション</p>\n'
+  ], [
+    'Code 1キャプション',
+    '<p>Code 1キャプション</p>\n'
   ],
 ];
 
