@@ -36,10 +36,11 @@ function convertToCaption(state, option) {
       '(?=[ ]+[^a-z])|$' +
     ')|' +
     '[.](' + markAfterNum + ')(?:' +
-      joint + '|(?=[ ]+[^a-z])|$)' +
-    ')';
+      joint + '|(?=[ ]+[^a-z])|$' +
+    ')' +
+  ')';
 
-    const markAfterJa = '(?:' +
+  const markAfterJa = '(?:' +
     ' *(?:' +
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
       jointFullWidth + '|' +
@@ -49,10 +50,8 @@ function convertToCaption(state, option) {
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
       jointFullWidth + '|' +
       '(?=[ ]+)|$' +
-    ')|' +
-    '[.](' + markAfterNum + ')(?:' +
-      joint + '|(?=[ ]+)|$)' +
-    ')';
+    ')' +
+  ')';
 
   const markReg = {
     //fig(ure)?, illust, photo
