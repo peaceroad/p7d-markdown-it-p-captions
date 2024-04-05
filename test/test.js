@@ -233,6 +233,9 @@ const ms = [
   ], [
     '図 Testキャプション',
     '<p class="caption-img"><span class="caption-img-label">図</span> Testキャプション</p>\n'
+  ], [
+    '図　Testキャプション',
+    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">　</span></span>Testキャプション</p>\n'
   ],
 ];
 
