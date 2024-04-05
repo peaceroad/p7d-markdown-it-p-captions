@@ -148,7 +148,7 @@ const ms = [
     '<p class="caption-img"><span class="caption-img-label">図A<span class="caption-img-label-joint">.</span></span> a cat.</p>\n'
   ], [
     '図A a cat.',
-    '<p>図A a cat.</p>\n'
+    '<p class="caption-img"><span class="caption-img-label">図A</span> a cat.</p>\n'
   ], [
     '図A　a cat.',
     '<p class="caption-img"><span class="caption-img-label">図A<span class="caption-img-label-joint">　</span></span>a cat.</p>\n'
@@ -212,6 +212,15 @@ const ms = [
   ], [
     'Code 猫',
     '<p class="caption-pre-code"><span class="caption-pre-code-label">Code</span> 猫</p>\n'
+  ], [
+    'Code A',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code A</span></p>\n'
+  ], [
+    'Code A.',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Code A<span class="caption-pre-code-label-joint">.</span></span></p>\n'
+  ], [
+    'Code A a cat.',
+    '<p>Code A a cat.</p>\n'
   ], [
     'fig 1. Test Caption',
     '<p class="caption-img"><span class="caption-img-label">fig 1<span class="caption-img-label-joint">.</span></span> Test Caption</p>\n'
@@ -472,12 +481,14 @@ const msRemoveUnnumberedLabelExceptMarks = [
 
 
 let n = 0;
+let pass = true;
 while(n < ms.length) {
-  console.log('Test(default): ' + n);
   const h = mdDefault.render(ms[n][0]);
   try {
     assert.strictEqual(h, ms[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(default): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + ms[n][0] + '\nH: ' + h +'C: ' + ms[n][1]);
   };
@@ -486,11 +497,12 @@ while(n < ms.length) {
 
 n = 0;
 while(n < msCP.length) {
-  console.log('Test(classPrefix): ' + n);
   const hCP =   mdClassPrefix.render(msCP[n][0]);
   try {
     assert.strictEqual(hCP, msCP[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(classPrefix): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msCP[n][0] + '\nH: ' + hCP +'C: ' + msCP[n][1]);
   };
@@ -498,11 +510,12 @@ while(n < msCP.length) {
 }
 n = 0;
 while(n < msDquoteFilename.length) {
-  console.log('Test(filename): ' + n);
   const hDquoteFilename = mdDquoteFilename.render(msDquoteFilename[n][0]);
   try {
     assert.strictEqual(hDquoteFilename, msDquoteFilename[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(filename): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msDquoteFilename[n][0] + '\nH: ' + hDquoteFilename +'C: ' + msDquoteFilename[n][1]);
   };
@@ -510,11 +523,12 @@ while(n < msDquoteFilename.length) {
 }
 n = 0;
 while(n < msStrongFilename.length) {
-  console.log('Test(strongFilename): ' + n);
   const hStrongFilename = mdStrongFilename.render(msStrongFilename[n][0]);
   try {
     assert.strictEqual(hStrongFilename, msStrongFilename[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(strongFilename): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msStrongFilename[n][0] + '\nH: ' + hStrongFilename +'C: ' + msStrongFilename[n][1]);
   };
@@ -522,11 +536,12 @@ while(n < msStrongFilename.length) {
 }
 n = 0;
 while(n < msHasNumClass.length) {
-  console.log('Test(hasNumClass): ' + n);
   const hHasNumClass = mdHasNumClass.render(msHasNumClass[n][0]);
   try {
     assert.strictEqual(hHasNumClass, msHasNumClass[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(hasNumClass): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msHasNumClass[n][0] + '\nH: ' + hHasNumClass +'C: ' + msHasNumClass[n][1]);
   };
@@ -535,11 +550,12 @@ while(n < msHasNumClass.length) {
 
 n = 0;
 while(n < msBLabel.length) {
-  console.log('Test(bLabel): ' + n);
   const hBLabel = mdBLabel.render(msBLabel[n][0]);
   try {
     assert.strictEqual(hBLabel, msBLabel[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(bLabel): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msBLabel[n][0] + '\nH: ' + hBLabel +'C: ' + msBLabel[n][1]);
   };
@@ -547,11 +563,12 @@ while(n < msBLabel.length) {
 }
 n = 0;
 while(n < msStrongLabel.length) {
-  console.log('Test(strongLabel): ' + n);
   const hStrongLabel = mdStrongLabel.render(msBLabel[n][0]);
   try {
     assert.strictEqual(hStrongLabel, msStrongLabel[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(strongLabel): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msStrongLabel[n][0] + '\nH: ' + hStrongLabel +'C: ' + msStrongLabel[n][1]);
   };
@@ -559,11 +576,12 @@ while(n < msStrongLabel.length) {
 }
 n = 0;
 while(n < msJointSpaceUseHalfWidth.length) {
-  console.log('Test(jointSpaceUseHalfWidth): ' + n);
   const hJointSpaceUseHalfWidth = mdJointSpaceUseHalfWidth.render(msJointSpaceUseHalfWidth[n][0]);
   try {
     assert.strictEqual(hJointSpaceUseHalfWidth, msJointSpaceUseHalfWidth[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(jointSpaceUseHalfWidth): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msJointSpaceUseHalfWidth[n][0] + '\nH: ' + hJointSpaceUseHalfWidth +'C: ' + msJointSpaceUseHalfWidth[n][1]);
   };
@@ -571,11 +589,12 @@ while(n < msJointSpaceUseHalfWidth.length) {
 }
 n = 0;
 while(n < msRemoveUnnumberedLabel.length) {
-  console.log('Test(removeUnnumberedLabel): ' + n);
   const hRemoveUnnumberedLabel = mdRemoveUnnumberedLabel.render(msRemoveUnnumberedLabel[n][0]);
   try {
     assert.strictEqual(hRemoveUnnumberedLabel, msRemoveUnnumberedLabel[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(removeUnnumberedLabel): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msRemoveUnnumberedLabel[n][0] + '\nH: ' + hRemoveUnnumberedLabel +'C: ' + msRemoveUnnumberedLabel[n][1]);
   };
@@ -583,11 +602,12 @@ while(n < msRemoveUnnumberedLabel.length) {
 }
 n = 0;
 while(n < msRemoveUnnumberedLabelExceptBlockquote.length) {
-  console.log('Test(removeUnnumberedLabelExceptBlockquote): ' + n);
   const hRemoveUnnumberedLabelExceptBlockquote = mdRemoveUnnumberedLabelExceptBlockquote.render(msRemoveUnnumberedLabelExceptBlockquote[n][0]);
   try {
     assert.strictEqual(hRemoveUnnumberedLabelExceptBlockquote, msRemoveUnnumberedLabelExceptBlockquote[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(removeUnnumberedLabelExceptBlockquote): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msRemoveUnnumberedLabelExceptBlockquote[n][0] + '\nH: ' + hRemoveUnnumberedLabelExceptBlockquote +'C: ' + msRemoveUnnumberedLabelExceptBlockquote[n][1]);
   };
@@ -595,13 +615,18 @@ while(n < msRemoveUnnumberedLabelExceptBlockquote.length) {
 }
 n = 0;
 while(n < msRemoveUnnumberedLabelExceptMarks.length) {
-  console.log('Test(removeUnnumberedLabelExceptMarks): ' + n);
   const hRemoveUnnumberedLabelExceptMarks = mdRemoveUnnumberedLabelExceptMarks.render(msRemoveUnnumberedLabelExceptMarks[n][0]);
   try {
     assert.strictEqual(hRemoveUnnumberedLabelExceptMarks, msRemoveUnnumberedLabelExceptMarks[n][1]);
   } catch(e) {
+    pass = false
+    console.log('Test(removeUnnumberedLabelExceptMarks): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msRemoveUnnumberedLabelExceptMarks[n][0] + '\nH: ' + hRemoveUnnumberedLabelExceptMarks +'C: ' + msRemoveUnnumberedLabelExceptMarks[n][1]);
   };
   n++;
+}
+
+if (pass) {
+  console.log('Passed all test.')
 }

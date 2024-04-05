@@ -36,7 +36,7 @@ First, the strings listed in the table below are required as the first string of
 | `caption-blockquote` | source, quote, blockquote, 引用, 引用元, 出典 |
 | `caption-slide`| slide, スライド |
 
-Additionally, a delimiter is required after these strings (`[.:．.:　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese, only half-width spaces can be used as delimiters.
+Additionally, a delimiter is required after these strings (`[.:．.:　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese label, only half-width spaces can be used as delimiters.
 
 ```md
 Fig. A caption
@@ -53,6 +53,8 @@ Fig: A caption
 
 図 キャプション
 ```
+
+Notice. Even if the label is in English, if the caption body does not start with `[0-9a-zA-Z]`, delimiters are not necessary and only a half-width space is required to convert the caption. ex. `Figure 猫`
 
 You can also put a serial number, such as 0-9A-Z.-, between the first term and the separator.
 

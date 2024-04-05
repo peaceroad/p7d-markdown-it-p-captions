@@ -24,11 +24,11 @@ function convertToCaption(state, option) {
   const jointFullWidth = '[．。：　]';
   const jointHalfWidth = '[.:]';
 
-  const markAfter = '(?:' +
-    ' *(?:' + 
+  const markAfterEn = '(?:' +
+    ' *(?:' +
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
-      jointFullWidth +
-      '|(?=[ ]+[^0-9a-zA-Z])' +
+      jointFullWidth + '|' +
+      '(?=[ ]+[^0-9a-zA-Z])' +
     ')|' +
     ' *' + '(' + markAfterNum + ')(?:' +
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
@@ -39,55 +39,56 @@ function convertToCaption(state, option) {
       joint + '|(?=[ ]+[^a-z])|$)' +
     ')';
 
+    const markAfterJa = '(?:' +
+    ' *(?:' +
+      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+      jointFullWidth + '|' +
+      '(?=[ ]+)' +
+    ')|' +
+    ' *' + '(' + markAfterNum + ')(?:' +
+      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+      jointFullWidth + '|' +
+      '(?=[ ]+)|$' +
+    ')|' +
+    '[.](' + markAfterNum + ')(?:' +
+      joint + '|(?=[ ]+)|$)' +
+    ')';
+
   const markReg = {
     //fig(ure)?, illust, photo
     "img": new RegExp('^(?:' +
-      '(?:' +
-        '[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO[tT][oO]|'+
-        '図|イラスト|写真' +
-      ')' + markAfter +
+      '(?:[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO[tT][oO])'+ markAfterEn + '|' +
+      '(?:図|イラスト|写真)' + markAfterJa +
     ')'),
     //movie, video
     "video": new RegExp('^(?:' +
-      '(?:' +
-        '[mM][oO][vV][iI][eE]|[vV][iI][dD][eE][oO]|' +
-        '動画|ビデオ' +
-      ')' + markAfter +
+      '(?:[mM][oO][vV][iI][eE]|[vV][iI][dD][eE][oO])'+ markAfterEn + '|' +
+      '(?:動画|ビデオ)' + markAfterJa +
     ')'),
     //table
     "table": new RegExp('^(?:' +
-      '(?:' +
-        '[tT][aA][bB][lL][eE]|'+
-        '表' +
-        ')' + markAfter +
+      '(?:[tT][aA][bB][lL][eE])'+ markAfterEn + '|' +
+      '(?:表)' + markAfterJa +
     ')'),
     //code(block)?, program
     "pre-code": new RegExp('^(?:' +
-      '(?:' +
-        '[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI[tT][hH][mM]|'+
-        '(?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法' +
-        ')' + markAfter +
+      '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI[tT][hH][mM])'+ markAfterEn + '|' +
+      '(?:(?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
     ')'),
     //terminal, prompt, command
     "pre-samp": new RegExp('^(?:' +
-      '(?:' + 
-        '[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD]|' +
-        '端末|ターミナル|コマンド|(?:コマンド)?プロンプト' +
-        ')' + markAfter +
+      '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
+      '(?:端末|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
     ')'),
     //quote, blockquote, source
     "blockquote": new RegExp('^(?:' +
-      '(?:' +
-        '(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE]|'+
-        '引用(?:元)?|出典' +
-        ')' + markAfter +
+      '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE])'+ markAfterEn + '|' +
+      '(?:引用(?:元)?|出典)' + markAfterJa +
     ')'),
     //slide
     "slide": new RegExp('^(?:' +
-      '(?:' +
-        '[sS][lL][iI][dD][eE]|' +
-        'スライド' +
-        ')' + markAfter +
+      '(?:[sS][lL][iI][dD][eE])'+ markAfterEn + '|' +
+      '(?:スライド)' + markAfterJa +
     ')')
   };
 
