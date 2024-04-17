@@ -56,7 +56,7 @@ function convertToCaption(state, option) {
   const markReg = {
     //fig(ure)?, illust, photo
     "img": new RegExp('^(?:' +
-      '(?:[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO[tT][oO])'+ markAfterEn + '|' +
+      '(?:[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO][tT][oO])'+ markAfterEn + '|' +
       '(?:図|イラスト|写真)' + markAfterJa +
     ')'),
     //movie, video
@@ -71,7 +71,7 @@ function convertToCaption(state, option) {
     ')'),
     //code(block)?, program
     "pre-code": new RegExp('^(?:' +
-      '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI[tT][hH][mM])'+ markAfterEn + '|' +
+      '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI][tT][hH][mM])'+ markAfterEn + '|' +
       '(?:(?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
     ')'),
     //terminal, prompt, command
