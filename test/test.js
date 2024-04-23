@@ -93,6 +93,9 @@ const ms = [
     '図 ',
     '<p>図</p>\n'
   ], [
+    '図：',
+    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">：</span></span></p>\n'
+  ], [
     '図.',
     '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>\n'
   ], [

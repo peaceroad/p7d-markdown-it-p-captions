@@ -91,6 +91,8 @@ function convertToCaption(state, option) {
     ')')
   };
 
+  /* Notice: At present, the label only caption such as "Figure." and "図。" can be converted, but double-byte space used label only caption such as `図　` cannot be converted. */
+
   while (n < state.tokens.length - 1) {
     const token = state.tokens[n];
     const nextToken = state.tokens[n+1];
@@ -119,7 +121,6 @@ function convertToCaption(state, option) {
           actualLabelJoint = actualLabelJoint[1];
         }
         actualLabel = actualLabel.replace(/ *$/, '');
-        
         let convertJointSpaceFullWith = false;
         if (opt.jointSpaceUseHalfWidth && actualLabelJoint === '　') {
           actualLabelJoint = ''
