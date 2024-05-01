@@ -1,8 +1,9 @@
 {
   "name": "p7d-markdown-it-p-captions",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "A markdown-it plugin. For a paragraph, it determines if it is a caption from the string at the beginning of the paragraph and adds a class attribute value to indicate that it is a caption.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "node test/test.js"
   },
@@ -13,6 +14,6 @@
     "url": "https://github.com/peaceroad/p7d-markdown-it-p-captions/issues"
   },
   "devDependencies": {
-    "markdown-it": "^12.0.6"
+    "markdown-it": "^14.1.0"
   }
 }

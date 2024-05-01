@@ -1,6 +1,4 @@
-'use strict';
-
-function convertToCaption(state, option) {
+const convertToCaption = (state, option) => {
   const opt = {
     classPrefix: 'caption',
     dquoteFilename: false,
@@ -30,7 +28,7 @@ function convertToCaption(state, option) {
       jointFullWidth + '|' +
       '(?=[ ]+[^0-9a-zA-Z])' +
     ')|' +
-    ' *' + '(' + markAfterNum + ')(?:' +
+    ' *(' + markAfterNum + ')(?:' +
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
       jointFullWidth + '|' +
       '(?=[ ]+[^a-z])|$' +
@@ -46,7 +44,7 @@ function convertToCaption(state, option) {
       jointFullWidth + '|' +
       '(?=[ ]+)' +
     ')|' +
-    ' *' + '(' + markAfterNum + ')(?:' +
+    ' *(' + markAfterNum + ')(?:' +
       jointHalfWidth + '(?:(?=[ ]+)|$)|' +
       jointFullWidth + '|' +
       '(?=[ ]+)|$' +
@@ -91,7 +89,7 @@ function convertToCaption(state, option) {
     ')')
   };
 
-  /* Notice: At present, the label only caption such as "Figure." and "図。" can be converted, but double-byte space used label only caption such as `図　` cannot be converted. */
+  /* Notice: the label only caption such as "Figure." and "図。" can be converted, but double-byte space caption i.e. `図　` only  cannot be converted. (It has already been trimmed in nextToken.) */
 
   while (n < state.tokens.length - 1) {
     const token = state.tokens[n];
@@ -139,7 +137,7 @@ function convertToCaption(state, option) {
   }
 }
 
-function actualLabelContent (actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt) {
+const actualLabelContent = (actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt) => {
   actualLabel = actualLabel.replace(new RegExp('\\\\' + actualLabelJoint + '$'), '');
   if (convertJointSpaceFullWith) {
     actualLabel = actualLabel.replace(/　$/, '');
@@ -147,7 +145,7 @@ function actualLabelContent (actualLabel, actualLabelJoint, convertJointSpaceFul
   return actualLabel;
 }
 
-function markFilename (state, nextToken, mark, opt) {
+const markFilename = (state, nextToken, mark, opt) => {
 
   let filename = nextToken.children[0].content.match(/^([ 　]*?)"(\S.*?)"(?:[ 　]+|$)/);
   nextToken.children[0].content = nextToken.children[0].content.replace(/^[ 　]*?"\S.*?"([ 　]+|$)/, '$1');
@@ -164,7 +162,7 @@ function markFilename (state, nextToken, mark, opt) {
   return;
 }
 
-function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt) {
+const addLabel = (state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt) => {
 
   let labelTag = 'span';
   if (opt.bLabel) labelTag = 'b';
@@ -231,7 +229,7 @@ function addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
   return true;
 }
 
-function modifyLabel (state, nextToken, mark, labelToken, actualLabelJoint, opt) {
+const modifyLabel = (state, nextToken, mark, labelToken, actualLabelJoint, opt) => {
   nextToken.children.splice(0, 0, labelToken.first, labelToken.open, labelToken.content, labelToken.close);
   if (!actualLabelJoint) { return; }
   nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(actualLabelJoint + ' *$'), '');
@@ -248,8 +246,9 @@ function modifyLabel (state, nextToken, mark, labelToken, actualLabelJoint, opt)
   return;
 }
 
-module.exports = function plugin(md, option) {
+const mditPCaption = (md, option) => {
   md.core.ruler.after('inline', 'markdown-it-p-captions', (state) => {
     convertToCaption(state, option);
   });
 }
+export default mditPCaption

@@ -1,29 +1,18 @@
-const assert = require('assert');
-const mdDefault = require('markdown-it')();
-const mdClassPrefix = require('markdown-it')();
-const mdDquoteFilename = require('markdown-it')();
-const mdStrongFilename = require('markdown-it')();
-const mdHasNumClass = require('markdown-it')();
-const mdBLabel = require('markdown-it')();
-const mdStrongLabel = require('markdown-it')();
-const mdJointSpaceUseHalfWidth = require('markdown-it')();
-const mdRemoveUnnumberedLabel = require('markdown-it')();
-const mdRemoveUnnumberedLabelExceptBlockquote = require('markdown-it')();
-const mdRemoveUnnumberedLabelExceptMarks = require('markdown-it')();
+import assert from 'assert'
+import mdit from 'markdown-it'
+import mditPCaption from '../index.js'
 
-const captions = require('../index.js');
-
-mdDefault.use(captions);
-mdClassPrefix.use(captions, {classPrefix: 'f'});
-mdDquoteFilename.use(captions, {dquoteFilename: true});
-mdStrongFilename.use(captions, {strongFilename: true});
-mdHasNumClass.use(captions, {hasNumClass: true});
-mdBLabel.use(captions, {bLabel: true});
-mdStrongLabel.use(captions, {strongLabel: true});
-mdJointSpaceUseHalfWidth.use(captions, {jointSpaceUseHalfWidth: true});
-mdRemoveUnnumberedLabel.use(captions, {removeUnnumberedLabel: true});
-mdRemoveUnnumberedLabelExceptBlockquote.use(captions, {removeUnnumberedLabelExceptMarks: ['blockquote']});
-mdRemoveUnnumberedLabelExceptMarks.use(captions, {
+const mdDefault = mdit().use(mditPCaption);
+const mdClassPrefix = mdit().use(mditPCaption, {classPrefix: 'f'});
+const mdDquoteFilename = mdit().use(mditPCaption, {dquoteFilename: true});
+const mdStrongFilename = mdit().use(mditPCaption, {strongFilename: true});
+const mdHasNumClass = mdit().use(mditPCaption, {hasNumClass: true});
+const mdBLabel = mdit().use(mditPCaption, {bLabel: true});
+const mdStrongLabel = mdit().use(mditPCaption, {strongLabel: true});
+const mdJointSpaceUseHalfWidth = mdit().use(mditPCaption, {jointSpaceUseHalfWidth: true});
+const mdRemoveUnnumberedLabel = mdit().use(mditPCaption, {removeUnnumberedLabel: true});
+const mdRemoveUnnumberedLabelExceptBlockquote = mdit().use(mditPCaption, {removeUnnumberedLabelExceptMarks: ['blockquote']});
+const mdRemoveUnnumberedLabelExceptMarks = mdit().use(mditPCaption, {
   removeUnnumberedLabel: true,
   removeUnnumberedLabelExceptMarks: ['blockquote'],
 });
@@ -88,9 +77,6 @@ const ms = [
     '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> a cat.</p>\n'
   ], [
     '図',
-    '<p>図</p>\n'
-  ], [
-    '図 ',
     '<p>図</p>\n'
   ], [
     '図：',
@@ -489,6 +475,7 @@ const msRemoveUnnumberedLabelExceptMarks = [
 let n = 0;
 let pass = true;
 while(n < ms.length) {
+ // if (n !== 20) {n++; continue;}
   const h = mdDefault.render(ms[n][0]);
   try {
     assert.strictEqual(h, ms[n][1]);

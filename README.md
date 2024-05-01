@@ -3,9 +3,10 @@
 p7d-markdown-it-p-captions is a markdown-it plugin. For a paragraph, it determines if it is a caption from the string at the beginning of the paragraph and adds a class attribute value to indicate that it is a caption.
 
 ```js
-const md = require('markdown-it')();
-const captions = require('p7d-markdown-it-p-captions');
-md.use(captions);
+import mdit from 'markdown-it'
+import mditPCption from 'p7d-markdown-it-p-captions'
+
+const md = mdit().use(mditPCptions)
 
 const src = 'Figure 1. A caption.\n';
 console.log(md.render(src));
@@ -15,9 +16,7 @@ console.log(md.render(src));
 If you want to change the prefix of the class name from ‘caption’, set the option as follows.
 
 ```js
-const md = require('markdown-it')();
-const captions = require('p7d-markdown-it-p-captions');
-md.use(captions, {classPrefix: 'f'});
+const md = mdit().use(captions, {classPrefix: 'f'})
 
 const src = 'Figure 1. A caption.\n';
 console.log(md.render(src));
@@ -176,7 +175,7 @@ Note that a space is required between the file name and caption.
 ### Use double quote
 
 ```js
-md.use(captions, {dquoteFilename: true});
+md.use(mditPCaption, {dquoteFilename: true});
 
 const src = 'Code. "Filename.js" Call a cat.';
 console.log(md.render(src));
@@ -186,7 +185,7 @@ console.log(md.render(src));
 ### Use strong quote
 
 ```js
-md.use(captions, {strongFilename: true});
+md.use(mditPCaption, {strongFilename: true});
 
 const src = 'Code. **Filename** A caption.\n';
 console.log(md.render(src));
@@ -198,7 +197,7 @@ console.log(md.render(src));
 If the labels have numbers, add class: `label-has-num`
 
 ```js
-md.use(captions, {hasNumClass: true});
+md.use(mditPCaption, {hasNumClass: true});
 
 const src = 'Code 1. A caption.\n';
 console.log(md.render(src));
@@ -208,7 +207,7 @@ console.log(md.render(src));
 ## Option: Use b/strong element for label
 
 ```js
-md.use(captions, {bLabel: true});
+md.use(mditPCaption, {bLabel: true});
 
 const src = 'Code 1. A caption.\n';
 console.log(md.render(src));
@@ -216,7 +215,7 @@ console.log(md.render(src));
 ```
 
 ```js
-md.use(captions, {strongLabel: true});
+md.use(mditPCaption, {strongLabel: true});
 
 const src = 'Code 1. A caption.\n';
 console.log(md.render(src));
@@ -226,7 +225,7 @@ console.log(md.render(src));
 ## Option: Convert full-width space in label joint to half-width
 
 ```js
-md.use(captions, {jointSpaceUseHalfWidth: true});
+md.use(mditPCaption, {jointSpaceUseHalfWidth: true});
 
 const src = '図　キャプション\n';
 console.log(md.render(src));
@@ -236,7 +235,7 @@ console.log(md.render(src));
 ## Option: Remove unnumbered Label
 
 ```js
-md.use(captions, {removeUnnumberedLabel: true});
+md.use(mditPCaption, {removeUnnumberedLabel: true});
 
 const src1 = '図　キャプション\n';
 console.log(md.render(src1));
@@ -250,7 +249,7 @@ console.log(md.render(src2));
 ## Option: removeUnnumberedLabelExceptMarks
 
 ```js
-md.use(captions, {
+md.use(mditPCaption, {
   removeUnnumberedLabel: true,
   removeUnnumberedLabelExceptMarks: ["blockquote"],
 });
