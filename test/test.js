@@ -85,6 +85,12 @@ const ms = [
     '図.',
     '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>\n'
   ], [
+    '図 ',
+    '<p>図</p>\n'
+  ], [
+    '図　',
+    '<p>図</p>\n'
+  ], [
     '図1',
     '<p class="caption-img"><span class="caption-img-label">図1</span></p>\n'
   ], [
@@ -223,8 +229,17 @@ const ms = [
     '図 Testキャプション',
     '<p class="caption-img"><span class="caption-img-label">図</span> Testキャプション</p>\n'
   ], [
+    '図 1Testキャプション',
+    '<p class="caption-img"><span class="caption-img-label">図</span> 1Testキャプション</p>\n'
+  ], [
     '図　Testキャプション',
     '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">　</span></span>Testキャプション</p>\n'
+  ],[
+    '- コマンド：`pwd`',
+    '<ul>\n<li>コマンド：<code>pwd</code></li>\n</ul>\n'
+  ],[
+    '段落\n\n- リスト\n- コマンド：`pwd`\n\n段落',
+    '<p>段落</p>\n<ul>\n<li>リスト</li>\n<li>コマンド：<code>pwd</code></li>\n</ul>\n<p>段落</p>\n'
   ],
 ];
 
@@ -475,7 +490,7 @@ const msRemoveUnnumberedLabelExceptMarks = [
 let n = 0;
 let pass = true;
 while(n < ms.length) {
- // if (n !== 20) {n++; continue;}
+//  if (n !== 73) {n++; continue;}
   const h = mdDefault.render(ms[n][0]);
   try {
     assert.strictEqual(h, ms[n][1]);
