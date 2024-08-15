@@ -89,7 +89,7 @@ const convertToCaption = (state, option) => {
     ')')
   };
 
-  /* Notice: the label only caption such as "Figure." and "図。" can be converted, but double-byte space caption i.e. `図　` only  cannot be converted. (This happens because the half-width spaces at the end of the paragraph have been trimmed.) */
+  /* Notice: the label only caption such as "Figure." and "図。" can be converted, but double-byte space caption i.e. `図　` only  cannot be converted. (This happens because the full-width spaces at the end of the paragraph have been trimmed.) */
 
   while (n < state.tokens.length - 1) {
     const token = state.tokens[n];
