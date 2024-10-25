@@ -1,144 +1,131 @@
-const convertToCaption = (state, option) => {
-  const opt = {
-    classPrefix: 'caption',
-    dquoteFilename: false,
-    strongFilename: false,
-    hasNumClass: false,
-    bLabel: false,
-    strongLabel: false,
-    jointSpaceUseHalfWidth: false,
-    removeUnnumberedLabel: false,
-    removeUnnumberedLabelExceptMarks: [],
-  };
-  if (option !== undefined) {
-    for (let o in option) {
-        opt[o] = option[o];
-    }
+const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}';
+const joint = '[.:．。：　]';
+const jointFullWidth = '[．。：　]';
+const jointHalfWidth = '[.:]';
+
+const markAfterEn = '(?:' +
+  ' *(?:' +
+    jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+    jointFullWidth + '|' +
+    '(?=[ ]+[^0-9a-zA-Z])' +
+  ')|' +
+  ' *(' + markAfterNum + ')(?:' +
+    jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+    jointFullWidth + '|' +
+    '(?=[ ]+[^a-z])|$' +
+  ')|' +
+  '[.](' + markAfterNum + ')(?:' +
+    joint + '|(?=[ ]+[^a-z])|$' +
+  ')' +
+')';
+
+const markAfterJa = '(?:' +
+  ' *(?:' +
+    jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+    jointFullWidth + '|' +
+    '(?=[ ]+)' +
+  ')|' +
+  ' *(' + markAfterNum + ')(?:' +
+    jointHalfWidth + '(?:(?=[ ]+)|$)|' +
+    jointFullWidth + '|' +
+    '(?=[ ]+)|$' +
+  ')' +
+')';
+
+const markReg = {
+  //fig(ure)?, illust, photo
+  "img": new RegExp('^(?:' +
+    '(?:[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO][tT][oO])'+ markAfterEn + '|' +
+    '(?:図|イラスト|写真)' + markAfterJa +
+  ')'),
+  //movie, video
+  "video": new RegExp('^(?:' +
+    '(?:[mM][oO][vV][iI][eE]|[vV][iI][dD][eE][oO])'+ markAfterEn + '|' +
+    '(?:動画|ビデオ)' + markAfterJa +
+  ')'),
+  //table
+  "table": new RegExp('^(?:' +
+    '(?:[tT][aA][bB][lL][eE])'+ markAfterEn + '|' +
+    '(?:表)' + markAfterJa +
+  ')'),
+  //code(block)?, program
+  "pre-code": new RegExp('^(?:' +
+    '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI][tT][hH][mM])'+ markAfterEn + '|' +
+    '(?:(?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
+  ')'),
+  //terminal, prompt, command
+  "pre-samp": new RegExp('^(?:' +
+    '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
+    '(?:端末|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
+  ')'),
+  //quote, blockquote, source
+  "blockquote": new RegExp('^(?:' +
+    '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE])'+ markAfterEn + '|' +
+    '(?:引用(?:元)?|出典)' + markAfterJa +
+  ')'),
+  //slide
+  "slide": new RegExp('^(?:' +
+    '(?:[sS][lL][iI][dD][eE])'+ markAfterEn + '|' +
+    '(?:スライド)' + markAfterJa +
+  ')')
+};
+
+/* Notice: the label only caption such as "Figure." and "図。" can be converted, but double-byte space caption i.e. `図　` only  cannot be converted. (This happens because the full-width spaces at the end of the paragraph have been trimmed.) */
+
+const setCaptionParagraph = (n, state, caption, sp, opt) => {
+  const token = state.tokens[n];
+  const nextToken = state.tokens[n+1];
+  const isParagraphStartTag = token.type === 'paragraph_open';
+  if (!isParagraphStartTag)  return caption //{ n++; continue; }
+  if (n > 1) {
+    const isList = state.tokens[n-1].type === 'list_item_open';
+    if (isList) return caption //{ n++; continue; }
   }
 
-  let n = 0;
-  const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}';
-  const joint = '[.:．。：　]';
-  const jointFullWidth = '[．。：　]';
-  const jointHalfWidth = '[.:]';
-
-  const markAfterEn = '(?:' +
-    ' *(?:' +
-      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
-      jointFullWidth + '|' +
-      '(?=[ ]+[^0-9a-zA-Z])' +
-    ')|' +
-    ' *(' + markAfterNum + ')(?:' +
-      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
-      jointFullWidth + '|' +
-      '(?=[ ]+[^a-z])|$' +
-    ')|' +
-    '[.](' + markAfterNum + ')(?:' +
-      joint + '|(?=[ ]+[^a-z])|$' +
-    ')' +
-  ')';
-
-  const markAfterJa = '(?:' +
-    ' *(?:' +
-      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
-      jointFullWidth + '|' +
-      '(?=[ ]+)' +
-    ')|' +
-    ' *(' + markAfterNum + ')(?:' +
-      jointHalfWidth + '(?:(?=[ ]+)|$)|' +
-      jointFullWidth + '|' +
-      '(?=[ ]+)|$' +
-    ')' +
-  ')';
-
-  const markReg = {
-    //fig(ure)?, illust, photo
-    "img": new RegExp('^(?:' +
-      '(?:[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO][tT][oO])'+ markAfterEn + '|' +
-      '(?:図|イラスト|写真)' + markAfterJa +
-    ')'),
-    //movie, video
-    "video": new RegExp('^(?:' +
-      '(?:[mM][oO][vV][iI][eE]|[vV][iI][dD][eE][oO])'+ markAfterEn + '|' +
-      '(?:動画|ビデオ)' + markAfterJa +
-    ')'),
-    //table
-    "table": new RegExp('^(?:' +
-      '(?:[tT][aA][bB][lL][eE])'+ markAfterEn + '|' +
-      '(?:表)' + markAfterJa +
-    ')'),
-    //code(block)?, program
-    "pre-code": new RegExp('^(?:' +
-      '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI][tT][hH][mM])'+ markAfterEn + '|' +
-      '(?:(?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
-    ')'),
-    //terminal, prompt, command
-    "pre-samp": new RegExp('^(?:' +
-      '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
-      '(?:端末|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
-    ')'),
-    //quote, blockquote, source
-    "blockquote": new RegExp('^(?:' +
-      '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE])'+ markAfterEn + '|' +
-      '(?:引用(?:元)?|出典)' + markAfterJa +
-    ')'),
-    //slide
-    "slide": new RegExp('^(?:' +
-      '(?:[sS][lL][iI][dD][eE])'+ markAfterEn + '|' +
-      '(?:スライド)' + markAfterJa +
-    ')')
-  };
-
-  /* Notice: the label only caption such as "Figure." and "図。" can be converted, but double-byte space caption i.e. `図　` only  cannot be converted. (This happens because the full-width spaces at the end of the paragraph have been trimmed.) */
-
-  while (n < state.tokens.length - 1) {
-    const token = state.tokens[n];
-    const nextToken = state.tokens[n+1];
-    const isParagraphStartTag = token.type === 'paragraph_open';
-    if (!isParagraphStartTag) { n++; continue; }
-    if (n > 1) {
-      const isList = state.tokens[n-1].type === 'list_item_open';
-      if (isList) { n++; continue; }
-    }
-
-    let actualLabel = '';
-    let actualNum = '';
-    let actualLabelJoint = '';
-    for (let mark of Object.keys(markReg)) {
-      const hasMarkLabel = nextToken.content.match(markReg[mark]);
-      if (hasMarkLabel) {
-        let i = 1;
-        while (i < 6) {
-          if (hasMarkLabel[i] !== undefined) {
-            actualNum = hasMarkLabel[i];
-            break;
-          }
-          i++;
+  let actualLabel = '';
+  let actualNum = '';
+  let actualLabelJoint = '';
+  for (let mark of Object.keys(markReg)) {
+    const hasMarkLabel = nextToken.content.match(markReg[mark]);
+    if (hasMarkLabel) {
+      let i = 1;
+      while (i < 6) {
+        if (hasMarkLabel[i] !== undefined) {
+          actualNum = hasMarkLabel[i];
+          break;
         }
-        //console.log('actualNum: ' + actualNum);
-        token.attrJoin('class', opt.classPrefix + '-' + mark);
-        actualLabel = hasMarkLabel[0];
-        actualLabelJoint = actualLabel.match(new RegExp('(' + joint + '|)$'));
-        if(actualLabelJoint) {
-          actualLabelJoint = actualLabelJoint[1];
-        }
-        actualLabel = actualLabel.replace(/ *$/, '');
-        let convertJointSpaceFullWith = false;
-        if (opt.jointSpaceUseHalfWidth && actualLabelJoint === '　') {
-          actualLabelJoint = ''
-          convertJointSpaceFullWith = true;
-        }
-        /*
-        console.log('=============================');
-        console.log('actualLabel: ' + actualLabel);
-        console.log('actualLabelJoint: ' + actualLabelJoint);
-        */
-        addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt);
-        break;
+        i++;
       }
-    };
-    n++;
+      //console.log('mark: ' + mark + ', caption.name: ' + caption.name + ', sp.isIframeTypeBlockquote: ' + sp.isIframeTypeBlockquote, ', sp.isVideoIframe: ' + sp.isVideoIframe)
+      if (sp.isIframeTypeBlockquote) {
+        if (mark !== 'blockquote' && caption.name !== 'blockquote') return caption
+      } else if (sp.isVideoIframe) {
+        if (mark !== 'video' && caption.name !== 'iframe') return caption
+      } else if (caption.name) {
+        if(caption.name !== 'iframe' && caption.name !== mark) return caption
+      }
+
+      token.attrJoin('class', opt.classPrefix + '-' + mark);
+      actualLabel = hasMarkLabel[0];
+      actualLabelJoint = actualLabel.match(new RegExp('(' + joint + '|)$'));
+      if(actualLabelJoint) {
+        actualLabelJoint = actualLabelJoint[1];
+      }
+      actualLabel = actualLabel.replace(/ *$/, '');
+      let convertJointSpaceFullWith = false;
+      if (opt.jointSpaceUseHalfWidth && actualLabelJoint === '　') {
+        actualLabelJoint = ''
+        convertJointSpaceFullWith = true;
+      }
+      /*
+      console.log('=============================');
+      console.log('actualLabel: ' + actualLabel + ', actualNum: ' + actualNum + ', actualLabelJoint: ' + actualLabelJoint);
+      */
+      addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt);
+      return caption
+    }
   }
+  return caption
 }
 
 const actualLabelContent = (actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt) => {
@@ -251,8 +238,44 @@ const modifyLabel = (state, nextToken, mark, labelToken, actualLabelJoint, opt) 
 }
 
 const mditPCaption = (md, option) => {
-  md.core.ruler.after('inline', 'markdown-it-p-captions', (state) => {
-    convertToCaption(state, option);
-  });
+  const opt = {
+    classPrefix: 'caption',
+    dquoteFilename: false,
+    strongFilename: false,
+    hasNumClass: false,
+    bLabel: false,
+    strongLabel: false,
+    jointSpaceUseHalfWidth: false,
+    removeUnnumberedLabel: false,
+    removeUnnumberedLabelExceptMarks: [],
+  };
+  if (option !== undefined) {
+    for (let o in option) {
+        opt[o] = option[o]
+    }
+  }
+
+  const caption = {
+    name: '',
+    type: '',
+    nameSuffix: '',
+    hasPrev: false,
+    hasNext: false,
+  }
+
+  const sp = {
+    isIframeTypeBlockquote: false,
+    isVideoIframe: false,
+  }
+
+  md.core.ruler.after('inline', 'p-caption', (state) => {
+    let n = 0;
+    while (n < state.tokens.length - 1) {
+      setCaptionParagraph(n, state, caption, sp, opt)
+      n++
+    }
+  })
 }
+
 export default mditPCaption
+export { setCaptionParagraph, markAfterNum, joint, jointFullWidth, jointHalfWidth, markReg }
