@@ -278,4 +278,4 @@ const mditPCaption = (md, option) => {
 }
 
 export default mditPCaption
-export { setCaptionParagraph, markAfterNum, joint, jointFullWidth, jointHalfWidth, markReg }
+export { setCaptionParagraph, markAfterNum, joint, jointFullWidth, jointHalfWidth, markAfterEn, markAfterJa, markReg }
