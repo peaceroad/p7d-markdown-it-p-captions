@@ -256,11 +256,11 @@ const mditPCaption = (md, option) => {
   }
 
   const caption = {
+    mark: '',
     name: '',
-    type: '',
     nameSuffix: '',
-    hasPrev: false,
-    hasNext: false,
+    isPrev: false,
+    isNext: false,
   }
 
   const sp = {
