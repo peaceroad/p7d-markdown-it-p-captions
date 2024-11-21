@@ -31,9 +31,11 @@ First, the strings listed in the table below are required as the first string of
 | `caption-video` | movie, video, 動画, ビデオ |
 | `caption-table` | table, 表 |
 | `caption-pre-code` | code, codeblock, program, algorithm, コード, ソースコード, リスト, 命令, プログラム, 算譜, アルゴリズム, 算法 |
-| `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト |
+| `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト [^table-note1] |
 | `caption-blockquote` | source, quote, blockquote, 引用, 引用元, 出典 |
 | `caption-slide`| slide, スライド |
+
+[^table-note1]: "リスト" is also applicable only when used via 7d-markdown-it-figure-with-p-caption.
 
 Additionally, a delimiter is required after these strings (`[.:．.:　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese label, only half-width spaces can be used as delimiters.
 

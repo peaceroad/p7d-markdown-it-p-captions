@@ -240,6 +240,9 @@ const ms = [
   ],[
     '段落\n\n- リスト\n- コマンド：`pwd`\n\n段落',
     '<p>段落</p>\n<ul>\n<li>リスト</li>\n<li>コマンド：<code>pwd</code></li>\n</ul>\n<p>段落</p>\n'
+  ],[
+    'リスト キャプション\n',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">リスト</span> キャプション</p>\n'
   ],
 ];
 

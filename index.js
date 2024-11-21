@@ -56,7 +56,7 @@ const markReg = {
   //terminal, prompt, command
   "pre-samp": new RegExp('^(?:' +
     '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
-    '(?:端末|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
+    '(?:端末|リスト|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
   ')'),
   //quote, blockquote, source
   "blockquote": new RegExp('^(?:' +
@@ -76,16 +76,23 @@ const setCaptionParagraph = (n, state, caption, sp, opt) => {
   const token = state.tokens[n];
   const nextToken = state.tokens[n+1];
   const isParagraphStartTag = token.type === 'paragraph_open';
-  if (!isParagraphStartTag)  return caption //{ n++; continue; }
+  if (!isParagraphStartTag)  return caption
   if (n > 1) {
     const isList = state.tokens[n-1].type === 'list_item_open';
-    if (isList) return caption //{ n++; continue; }
+    if (isList) return caption
   }
 
   let actualLabel = '';
   let actualNum = '';
   let actualLabelJoint = '';
   for (let mark of Object.keys(markReg)) {
+    if (caption.name) {
+      if (/^pre/.test(mark)) {
+        if (caption.name !== mark) {
+          continue
+        }
+      }
+    }
     const hasMarkLabel = nextToken.content.match(markReg[mark]);
     if (hasMarkLabel) {
       let i = 1;
