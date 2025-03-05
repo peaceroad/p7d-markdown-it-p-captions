@@ -31,11 +31,11 @@ First, the strings listed in the table below are required as the first string of
 | `caption-video` | movie, video, 動画, ビデオ |
 | `caption-table` | table, 表 |
 | `caption-pre-code` | code, codeblock, program, algorithm, コード, ソースコード, リスト, 命令, プログラム, 算譜, アルゴリズム, 算法 |
-| `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト [^table-note1] |
+| `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト [^table-note1], 図[^table-note1] |
 | `caption-blockquote` | source, quote, blockquote, 引用, 引用元, 出典 |
 | `caption-slide`| slide, スライド |
 
-[^table-note1]: "リスト" is also applicable only when used via 7d-markdown-it-figure-with-p-caption.
+[^table-note1]: "リスト" and "図" is also applicable only when used via 7d-markdown-it-figure-with-p-caption.
 
 Additionally, a delimiter is required after these strings (`[.:．.:　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese label, only half-width spaces can be used as delimiters.
 
@@ -263,4 +263,18 @@ console.log(md.render(src1));
 const src2 = '出典　キャプション\n';
 console.log(md.render(src2));
 //<p class="caption-blockquote"><span class="caption-blockquote-label">出典<span class="caption-blockquote-label-joint">　</span></span>キャプション</p>\n'
+```
+
+## Option: removeMarkNameInCaptionClass
+
+Remove the mark (name) of the class attribute of the span element.
+
+```js
+md.use(mditPCaption, {
+  removeMarkNameInCaptionClass: true,
+});
+
+const src = '図　キャプション\n';
+console.log(md.render(src));
+//<p class="caption-img"><span class="caption-label">図<span class="caption-label-joint">　</span></span>キャプション</p>\n'
 ```

@@ -2,6 +2,7 @@ const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}';
 const joint = '[.:．。：　]';
 const jointFullWidth = '[．。：　]';
 const jointHalfWidth = '[.:]';
+const jointSuffixReg = new RegExp('(' + joint + '|)$')
 
 const markAfterEn = '(?:' +
   ' *(?:' +
@@ -35,44 +36,58 @@ const markAfterJa = '(?:' +
 const markReg = {
   //fig(ure)?, illust, photo
   "img": new RegExp('^(?:' +
-    '(?:[fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO][tT][oO])'+ markAfterEn + '|' +
-    '(?:図|イラスト|写真)' + markAfterJa +
+    '([fF][iI][gG](?:[uU][rR][eE])?|[iI][lL]{2}[uU][sS][tT]|[pP][hH][oO][tT][oO])'+ markAfterEn + '|' +
+    '(図|イラスト|写真)' + markAfterJa +
   ')'),
   //movie, video
   "video": new RegExp('^(?:' +
-    '(?:[mM][oO][vV][iI][eE]|[vV][iI][dD][eE][oO])'+ markAfterEn + '|' +
-    '(?:動画|ビデオ)' + markAfterJa +
+    '([mM][oO][vV][iI][eE]|[vV][iI][dD][eE][oO])'+ markAfterEn + '|' +
+    '(動画|ビデオ)' + markAfterJa +
   ')'),
   //table
   "table": new RegExp('^(?:' +
-    '(?:[tT][aA][bB][lL][eE])'+ markAfterEn + '|' +
-    '(?:表)' + markAfterJa +
+    '([tT][aA][bB][lL][eE])'+ markAfterEn + '|' +
+    '(表)' + markAfterJa +
   ')'),
   //code(block)?, program
   "pre-code": new RegExp('^(?:' +
-    '(?:[cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI][tT][hH][mM])'+ markAfterEn + '|' +
-    '(?:(?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
+    '([cC][oO][dD][eE](?:[bB][lL][oO][cC][kK])?|[pP][rR][oO][gG][rR][aA][mM]|[aA][lL][gG][oO][rR][iI][tT][hH][mM])'+ markAfterEn + '|' +
+    '((?:ソース)?コード|リスト|命令|プログラム|算譜|アルゴリズム|算法)' + markAfterJa +
   ')'),
   //terminal, prompt, command
   "pre-samp": new RegExp('^(?:' +
-    '(?:[cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
-    '(?:端末|リスト|ターミナル|コマンド|(?:コマンド)?プロンプト)' + markAfterJa +
+    '([cC][oO][nN][sS][oO][lL][eE]|[tT][eE][rR][mM][iI][nN][aA][lL]|[pP][rR][oO][mM][pP][tT]|[cC][oO][mM]{2}[aA][nN][dD])'+ markAfterEn + '|' +
+    '(端末|リスト|ターミナル|コマンド|(?:コマンド)?プロンプト|図)' + markAfterJa +
   ')'),
   //quote, blockquote, source
   "blockquote": new RegExp('^(?:' +
-    '(?:(?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE])'+ markAfterEn + '|' +
-    '(?:引用(?:元)?|出典)' + markAfterJa +
+    '((?:[bB][lL][oO][cC][kK])?[qQ][uU][oO][tT][eE]|[sS][oO][uU][rR][cC][eE])'+ markAfterEn + '|' +
+    '(引用(?:元)?|出典)' + markAfterJa +
   ')'),
   //slide
   "slide": new RegExp('^(?:' +
-    '(?:[sS][lL][iI][dD][eE])'+ markAfterEn + '|' +
-    '(?:スライド)' + markAfterJa +
+    '([sS][lL][iI][dD][eE])'+ markAfterEn + '|' +
+    '(スライド)' + markAfterJa +
   ')')
 };
 
-/* Notice: the label only caption such as "Figure." and "図。" can be converted, but double-byte space caption i.e. `図　` only  cannot be converted. (This happens because the full-width spaces at the end of the paragraph have been trimmed.) */
+/* Notice: the label only caption such as "Figure.\n" and "図。\n" can be converted, but double-byte space caption i.e. `図　\n` only  cannot be converted. (This happens because the full-width spaces at the end of the paragraph have been trimmed.) */
 
-const setCaptionParagraph = (n, state, caption, sp, opt) => {
+const setFigureNumber = (n, state, mark, actualLabel, fNum) => {
+  const nextToken = state.tokens[n+1];
+  fNum[mark]++;
+  let vNum = fNum[mark];
+  let regCont = '^' + actualLabel.mark
+  let replacedCont = actualLabel.mark + (/^[a-zA-Z]/.test(actualLabel.mark) ? ' ' : '') + vNum
+  actualLabel.num = vNum
+  const reg = new RegExp(regCont)
+  nextToken.content = nextToken.content.replace(reg, replacedCont)
+  nextToken.children[0].content = nextToken.children[0].content.replace(reg, replacedCont)
+  actualLabel.content = actualLabel.content.replace(reg, replacedCont)
+  return
+}
+
+const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   const token = state.tokens[n];
   const nextToken = state.tokens[n+1];
   const isParagraphStartTag = token.type === 'paragraph_open';
@@ -81,70 +96,68 @@ const setCaptionParagraph = (n, state, caption, sp, opt) => {
     const isList = state.tokens[n-1].type === 'list_item_open';
     if (isList) return caption
   }
-
-  let actualLabel = '';
-  let actualNum = '';
-  let actualLabelJoint = '';
+  const actualLabel = {
+    content: '',
+    mark: '',
+    num: '',
+    joint: '',
+  }
   for (let mark of Object.keys(markReg)) {
-    if (caption.name) {
-      if (/^pre/.test(mark)) {
-        if (caption.name !== mark) {
-          continue
-        }
-      }
-    }
     const hasMarkLabel = nextToken.content.match(markReg[mark]);
-    if (hasMarkLabel) {
-      let i = 1;
-      while (i < 6) {
-        if (hasMarkLabel[i] !== undefined) {
-          actualNum = hasMarkLabel[i];
-          break;
-        }
-        i++;
-      }
-      //console.log('mark: ' + mark + ', caption.name: ' + caption.name + ', sp.isIframeTypeBlockquote: ' + sp.isIframeTypeBlockquote, ', sp.isVideoIframe: ' + sp.isVideoIframe)
-      if (sp.isIframeTypeBlockquote) {
-        if (mark !== 'blockquote' && caption.name !== 'blockquote') return caption
-      } else if (sp.isVideoIframe) {
-        if (mark !== 'video' && caption.name !== 'iframe') return caption
-      } else if (caption.name) {
-        if(caption.name !== 'iframe' && caption.name !== mark) return caption
-      }
+    if (!hasMarkLabel) continue
 
-      token.attrJoin('class', opt.classPrefix + '-' + mark);
-      actualLabel = hasMarkLabel[0];
-      actualLabelJoint = actualLabel.match(new RegExp('(' + joint + '|)$'));
-      if(actualLabelJoint) {
-        actualLabelJoint = actualLabelJoint[1];
-      }
-      actualLabel = actualLabel.replace(/ *$/, '');
-      let convertJointSpaceFullWith = false;
-      if (opt.jointSpaceUseHalfWidth && actualLabelJoint === '　') {
-        actualLabelJoint = ''
-        convertJointSpaceFullWith = true;
-      }
-      /*
-      console.log('=============================');
-      console.log('actualLabel: ' + actualLabel + ', actualNum: ' + actualNum + ', actualLabelJoint: ' + actualLabelJoint);
-      */
-      addLabel(state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt);
-      return caption
+    if (hasMarkLabel[1] === undefined) {
+      actualLabel.mark = hasMarkLabel[4]
+      actualLabel.num = hasMarkLabel[5]
+    } else {
+      actualLabel.mark = hasMarkLabel[1]
+      actualLabel.num = hasMarkLabel[2]
     }
+
+    if (caption.name) {
+      if (caption.name === 'pre-samp' && mark === 'img' && actualLabel.mark === '図') continue // for 図 sampキャプション
+      if (caption.name !== mark && actualLabel.mark === 'リスト') continue // for リスト sampキャプション
+    }
+
+    //console.log(hasMarkLabel)
+    //console.log('mark: ' + mark + ', caption.name: ' + caption.name + ', sp.isIframeTypeBlockquote: ' + sp.isIframeTypeBlockquote, ', sp.isVideoIframe: ' + sp.isVideoIframe)
+    if (sp.isIframeTypeBlockquote) {
+      if (mark !== 'blockquote' && caption.name !== 'blockquote') return
+    } else if (sp.isVideoIframe) {
+      if (mark !== 'video' && caption.name !== 'iframe') return
+    } else if (caption.name) {
+      if(caption.name !== 'iframe' && caption.name !== mark) return
+    }
+
+    token.attrJoin('class', opt.classPrefix + '-' + mark);
+    actualLabel.content = hasMarkLabel[0];
+
+    if (opt.setFigureNumber && (mark === 'img' || mark === 'table')) {
+      if (actualLabel.num === undefined) {
+        setFigureNumber(n, state, mark, actualLabel, fNum)
+      } else if (actualLabel.num > 0) {
+        fNum[mark] = actualLabel.num
+      }
+    }
+
+    actualLabel.joint = actualLabel.content.match(jointSuffixReg)
+    if(actualLabel.joint) {
+      actualLabel.joint = actualLabel.joint[1]
+    }
+    actualLabel.content = actualLabel.content.replace(/ *$/, '')
+    let convertJointSpaceFullWith = false;
+    if (opt.jointSpaceUseHalfWidth && actualLabel.joint === '　') {
+      actualLabel.joint = ''
+      convertJointSpaceFullWith = true
+    }
+    //console.log('actualLabel.content: ' + actualLabel.content + ', actualLabel.mark: ' + actualLabel.mark + ', actualLabel.num: ' + actualLabel.num + ', actualLabel.joint: ' + actualLabel.joint);
+    addLabelToken(state, nextToken, mark, actualLabel, convertJointSpaceFullWith, opt);
+    return
   }
-  return caption
+  return
 }
 
-const actualLabelContent = (actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt) => {
-  actualLabel = actualLabel.replace(new RegExp('\\\\' + actualLabelJoint + '$'), '');
-  if (convertJointSpaceFullWith) {
-    actualLabel = actualLabel.replace(/　$/, '');
-  }
-  return actualLabel;
-}
-
-const markFilename = (state, nextToken, mark, opt) => {
-
+const setFilename = (state, nextToken, mark, opt) => {
   let filename = nextToken.children[0].content.match(/^([ 　]*?)"(\S.*?)"(?:[ 　]+|$)/);
   nextToken.children[0].content = nextToken.children[0].content.replace(/^[ 　]*?"\S.*?"([ 　]+|$)/, '$1');
 
@@ -160,8 +173,7 @@ const markFilename = (state, nextToken, mark, opt) => {
   return;
 }
 
-const addLabel = (state, nextToken, mark, actualLabel, actualNum, actualLabelJoint, convertJointSpaceFullWith, opt) => {
-
+const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFullWith, opt) => {
   let labelTag = 'span';
   if (opt.bLabel) labelTag = 'b';
   if (opt.strongLabel) labelTag = 'strong';
@@ -173,16 +185,21 @@ const addLabel = (state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
     close: new state.Token(labelTag + '_close', labelTag, -1),
   };
 
-  labelToken.open.attrSet('class', opt.classPrefix + '-' + mark + '-label');
-  if (opt.hasNumClass && actualNum) {
+  let classPrefix = opt.classPrefix + '-'
+  if (!opt.removeMarkNameInCaptionClass) {
+    classPrefix += mark + '-'
+  }
+  labelToken.open.attrSet('class', classPrefix + 'label');
+  if (opt.hasNumClass && actualLabel.num) {
     labelToken.open.attrJoin('class', 'label-has-num');
   }
-  labelToken.content.content = actualLabelContent(actualLabel, actualLabelJoint, convertJointSpaceFullWith, opt);
 
-  nextToken.children[0].content = nextToken.children[0].content.replace(actualLabel, '');
+  nextToken.children[0].content = nextToken.children[0].content.replace(actualLabel.content, '');
   if (convertJointSpaceFullWith) {
-    nextToken.children[0].content = ' ' + nextToken.children[0].content;
+    actualLabel.content = actualLabel.content.replace(/　$/, '')
+    nextToken.children[0].content = ' ' + nextToken.children[0].content.replace(/^　/, '');
   }
+  labelToken.content.content = actualLabel.content
 
   if (opt.strongFilename) {
     if (nextToken.children.length > 4) {
@@ -196,12 +213,12 @@ const addLabel = (state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
 
   if (opt.dquoteFilename) {
     if (nextToken.children[0].content.match(/^[ 　]*?"\S.*?"(?:[ 　]+|$)/)) {
-      markFilename(state, nextToken, mark, opt);
+      setFilename(state, nextToken, mark, opt)
     }
   }
 
-  if (actualNum) {
-    modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+  if (actualLabel.num) {
+    addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt);
   } else {
     if (opt.removeUnnumberedLabel) {
       if (opt.removeUnnumberedLabelExceptMarks.length > 0) {
@@ -213,7 +230,7 @@ const addLabel = (state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
           }
         }
         if (isExceptMark) {
-          modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+          addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt);
         } else {
           nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
         }
@@ -221,13 +238,13 @@ const addLabel = (state, nextToken, mark, actualLabel, actualNum, actualLabelJoi
         nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^ *'), '');
       }
     } else {
-      modifyLabel(state, nextToken, mark, labelToken, actualLabelJoint, opt);
+      addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt);
     }
   }
   return true;
 }
 
-const modifyLabel = (state, nextToken, mark, labelToken, actualLabelJoint, opt) => {
+const addJointToken = (state, nextToken, mark, labelToken, actualLabelJoint, opt) => {
   nextToken.children.splice(0, 0, labelToken.first, labelToken.open, labelToken.content, labelToken.close);
   if (!actualLabelJoint) { return; }
   nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(actualLabelJoint + ' *$'), '');
@@ -237,7 +254,11 @@ const modifyLabel = (state, nextToken, mark, labelToken, actualLabelJoint, opt) 
     content: new state.Token('text', '', 0),
     close: new state.Token('span_close', 'span', -1),
   };
-  labelJointToken.open.attrSet('class', opt.classPrefix + '-' + mark + '-label-joint');
+  let classPrefix = opt.classPrefix + '-'
+  if (!opt.removeMarkNameInCaptionClass) {
+    classPrefix += mark + '-'
+  }
+  labelJointToken.open.attrSet('class', classPrefix + 'label-joint');
   labelJointToken.content.content = actualLabelJoint;
 
   nextToken.children.splice(3, 0, labelJointToken.open, labelJointToken.content, labelJointToken.close);
@@ -255,30 +276,30 @@ const mditPCaption = (md, option) => {
     jointSpaceUseHalfWidth: false,
     removeUnnumberedLabel: false,
     removeUnnumberedLabelExceptMarks: [],
-  };
-  if (option !== undefined) {
-    for (let o in option) {
-        opt[o] = option[o]
-    }
+    setFigureNumber: false,
+    removeMarkNameInCaptionClass: false,
   }
-
-  const caption = {
-    mark: '',
-    name: '',
-    nameSuffix: '',
-    isPrev: false,
-    isNext: false,
-  }
-
-  const sp = {
-    isIframeTypeBlockquote: false,
-    isVideoIframe: false,
-  }
+  if (option) Object.assign(opt, option)
 
   md.core.ruler.after('inline', 'p-caption', (state) => {
     let n = 0;
+    const fNum = {
+      img: 0,
+      table: 0,
+    }
+    const caption = {
+      mark: '',
+      name: '',
+      nameSuffix: '',
+      isPrev: false,
+      isNext: false,
+    }
+    const sp = {
+      isIframeTypeBlockquote: false,
+      isVideoIframe: false,
+    }
     while (n < state.tokens.length - 1) {
-      setCaptionParagraph(n, state, caption, sp, opt)
+      setCaptionParagraph(n, state, caption, fNum, sp, opt)
       n++
     }
   })

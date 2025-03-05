@@ -16,6 +16,7 @@ const mdRemoveUnnumberedLabelExceptMarks = mdit().use(mditPCaption, {
   removeUnnumberedLabel: true,
   removeUnnumberedLabelExceptMarks: ['blockquote'],
 });
+const mdSetFNum = mdit().use(mditPCaption, {setFigureNumber: true});
 
 const ms = [
   [
@@ -488,12 +489,45 @@ const msRemoveUnnumberedLabelExceptMarks = [
   ],
 ];
 
-
+const msSetFNum = [
+  [
+    'Figure. A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
+  ],
+  [
+    'Figure. A cat.\n\nFigure. A dog.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n<p class="caption-img"><span class="caption-img-label">Figure 2<span class="caption-img-label-joint">.</span></span> A dog.</p>\n'
+  ],
+  [
+    'Figure 1. A cat.\n\nFigure. A dog.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n<p class="caption-img"><span class="caption-img-label">Figure 2<span class="caption-img-label-joint">.</span></span> A dog.</p>\n'
+  ],
+  [
+    'Figure. A cat.\n\nFigure 2. A dog.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n<p class="caption-img"><span class="caption-img-label">Figure 2<span class="caption-img-label-joint">.</span></span> A dog.</p>\n'
+  ],
+  [
+    '図　キャプション',
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>キャプション</p>\n'
+  ],
+  [
+    '図　猫\n\n図　犬',
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>猫</p>\n<p class="caption-img"><span class="caption-img-label">図2<span class="caption-img-label-joint">　</span></span>犬</p>\n'
+  ],
+  [
+    'Table. Foods.',
+    '<p class="caption-table"><span class="caption-table-label">Table 1<span class="caption-table-label-joint">.</span></span> Foods.</p>\n'
+  ],
+  [
+    'Table. Foods.\n\nTable. Drinks.',
+    '<p class="caption-table"><span class="caption-table-label">Table 1<span class="caption-table-label-joint">.</span></span> Foods.</p>\n<p class="caption-table"><span class="caption-table-label">Table 2<span class="caption-table-label-joint">.</span></span> Drinks.</p>\n'
+  ]
+]
 
 let n = 0;
 let pass = true;
 while(n < ms.length) {
-//  if (n !== 73) {n++; continue;}
+  //if (n !== 51) {n++; continue;}
   const h = mdDefault.render(ms[n][0]);
   try {
     assert.strictEqual(h, ms[n][1]);
@@ -634,6 +668,20 @@ while(n < msRemoveUnnumberedLabelExceptMarks.length) {
     console.log('Test(removeUnnumberedLabelExceptMarks): ' + n);
     console.log('Incorrect: ')
     console.log('M: ' + msRemoveUnnumberedLabelExceptMarks[n][0] + '\nH: ' + hRemoveUnnumberedLabelExceptMarks +'C: ' + msRemoveUnnumberedLabelExceptMarks[n][1]);
+  };
+  n++;
+}
+n = 0;
+while(n < msSetFNum.length) {
+  //if (n !== 4) {n++; continue;}
+  const hSetFNum = mdSetFNum.render(msSetFNum[n][0]);
+  try {
+    assert.strictEqual(hSetFNum, msSetFNum[n][1]);
+  } catch(e) {
+    pass = false
+    console.log('Test(setFNum): ' + n);
+    console.log('Incorrect: ')
+    console.log('M: ' + msSetFNum[n][0] + '\nH: ' + hSetFNum +'C: ' + msSetFNum[n][1]);
   };
   n++;
 }
