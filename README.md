@@ -31,7 +31,7 @@ First, the strings listed in the table below are required as the first string of
 | `caption-video` | movie, video, 動画, ビデオ |
 | `caption-table` | table, 表 |
 | `caption-pre-code` | code, codeblock, program, algorithm, コード, ソースコード, リスト, 命令, プログラム, 算譜, アルゴリズム, 算法 |
-| `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト [^table-note1], 図[^table-note1] |
+| `caption-pre-samp` | console, terminal, prompt, command, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト, リスト [^table-note1], 図[^table-note1] |
 | `caption-blockquote` | source, quote, blockquote, 引用, 引用元, 出典 |
 | `caption-slide`| slide, スライド |
 
@@ -278,3 +278,4 @@ const src = '図　キャプション\n';
 console.log(md.render(src));
 //<p class="caption-img"><span class="caption-label">図<span class="caption-label-joint">　</span></span>キャプション</p>\n'
 ```
+
