@@ -244,6 +244,15 @@ const ms = [
   ],[
     'リスト キャプション\n',
     '<p class="caption-pre-code"><span class="caption-pre-code-label">リスト</span> キャプション</p>\n'
+  ],[
+    'Source code. A caption.\n',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Source code<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>\n'
+  ],[
+    'Source code 1. A caption.\n',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Source code 1<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>\n'
+  ],[
+    'Source code A.1. A caption.\n',
+    '<p class="caption-pre-code"><span class="caption-pre-code-label">Source code A.1<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>\n'
   ],
 ];
 
