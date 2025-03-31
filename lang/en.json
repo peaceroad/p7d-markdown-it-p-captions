@@ -1,0 +1,14 @@
+{
+  "type": {
+    "inter-word-space": true
+  },
+  "markReg": {
+    "img": "(fig(?:ure)?|illust|photo)",
+    "video": "(movie|video)",
+    "table": "(table)",
+    "pre-code": "((?:source ?)?code(?: ?block)?|program)",
+    "pre-samp": "(terminal|command(?: ?prompt)?|prompt)",
+    "blockquote": "((?:block ?)?quote|source|cit(?:ed|ation))",
+    "slide": "(slide)"
+  }
+}
