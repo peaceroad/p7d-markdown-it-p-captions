@@ -30,8 +30,8 @@ First, the strings listed in the table below are required as the first string of
 | `caption-img` | fig, figure, illust, photo, 図, 画像, イラスト, 写真 |
 | `caption-video` | movie, video, 動画, ビデオ |
 | `caption-table` | table, 表 |
-| `caption-pre-code` | code, sourcecode, codeblock, program, コード, ソースコード, リスト,プログラム, 算譜 |
-| `caption-pre-samp` | console, terminal, prompt, command, commandprompt, 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト, リスト [^table-note2], 図[^table-note2] |
+| `caption-pre-code` | code, sourcecode[^table-note1], codeblock[^table-note1], program, コード, ソースコード, リスト,プログラム, 算譜 |
+| `caption-pre-samp` | console, terminal, prompt, command, commandprompt[^table-note1], 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト, リスト [^table-note2], 図[^table-note2] |
 | `caption-blockquote` | source, cited, citation, quote, blockquote[^table-note1], 引用, 引用元, 出典 |
 | `caption-slide`| slide, スライド, 発表資料 |
 
