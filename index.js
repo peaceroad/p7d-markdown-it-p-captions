@@ -7,7 +7,7 @@ const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}'
 const joint = '[.:．。：　]'
 const jointFullWidth = '[．。：　]'
 const jointHalfWidth = '[.:]'
-const jointSuffixReg = new RegExp('(' + joint + '|)$')
+const jointSuffixReg = new RegExp('(' + joint + ')$')
 
 const markAfterWithSpace = '(?:' +
   ' *(?:' +
@@ -147,7 +147,6 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
     num: '',
     joint: '',
   }
-
   for (const mark of markRegKeys) {
     const hasMarkLabel = nextToken.content.match(markReg[mark])
     if (!hasMarkLabel) continue
