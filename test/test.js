@@ -253,6 +253,9 @@ const ms = [
   ],[
     'Source code A.1. A caption.\n',
     '<p class="caption-pre-code"><span class="caption-pre-code-label">Source code A.1<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>\n'
+  ], [
+    '> ![](image.png)\n>\n> Figure. A caption.\n',
+    '<blockquote>\n<p><img src="image.png" alt=""></p>\n<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A caption.</p>\n</blockquote>\n'
   ],
 ];
 

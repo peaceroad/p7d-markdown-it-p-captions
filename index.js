@@ -134,19 +134,16 @@ const mditPCaption = (md, option) => {
 const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   const tokens = state.tokens
   const token = tokens[n]
+  if (token.type !== 'paragraph_open') return caption
+  if (n > 1 && tokens[n-1].type === 'list_item_open') return caption
   const nextToken = tokens[n+1]
-  const isParagraphStartTag = token.type === 'paragraph_open'
-  if (!isParagraphStartTag)  return caption
-  if (n > 1) {
-    const isList = tokens[n-1].type === 'list_item_open'
-    if (isList) return caption
-  }
   const actualLabel = {
     content: '',
     mark: '',
     num: '',
     joint: '',
   }
+  
   for (const mark of markRegKeys) {
     const hasMarkLabel = nextToken.content.match(markReg[mark])
     if (!hasMarkLabel) continue
