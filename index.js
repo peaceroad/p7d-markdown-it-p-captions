@@ -1,6 +1,7 @@
 import langSets from './lang.js'
 
 const allLangs = Object.keys(langSets)
+const allLangsKey = allLangs.slice().sort().join(',')
 let langData = { ...langSets }
 
 const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}'
@@ -92,17 +93,24 @@ const mditPCaption = (md, option) => {
   }
   if (option) Object.assign(opt, option)
 
-  if (JSON.stringify(opt.languages) !== JSON.stringify(allLangs)) {
-    const langKey = opt.languages.slice().sort().join(',')
+  // compare sorted keys to avoid rebuild when order differs
+  const langKey = opt.languages.slice().sort().join(',')
+  if (langKey !== allLangsKey) {
     if (markRegCache[langKey]) {
       markReg = markRegCache[langKey].markReg
       markRegKeys = markRegCache[langKey].markRegKeys
     } else {
+      // build langData only for known languages to avoid runtime errors
       langData = {}
+      const validLangs = []
       opt.languages.forEach(lang => {
-        if (allLangData[lang]) { langData[lang] = allLangData[lang] }
+        if (langSets[lang]) {
+          langData[lang] = langSets[lang]
+          validLangs.push(lang)
+        }
       })
-      markReg = getMarkReg(opt.languages)
+      // pass only validated languages to regex builder
+      markReg = getMarkReg(validLangs)
       markRegKeys = Object.keys(markReg)
       markRegCache[langKey] = { markReg, markRegKeys }
     }
@@ -294,7 +302,21 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
 const addJointToken = (state, nextToken, mark, labelToken, actualLabelJoint, opt) => {
   nextToken.children.splice(0, 0, labelToken.first, labelToken.open, labelToken.content, labelToken.close)
   if (!actualLabelJoint) { return; }
-  nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(actualLabelJoint + ' *$'), '')
+  // Escape joint character for safe use in RegExp (e.g., '.' or ':' should be literal)
+  // Prefer simple string trimming when joint is a single character to avoid RegExp allocations
+  if (actualLabelJoint.length === 1) {
+    // remove actualLabelJoint and trailing spaces at end
+    if (nextToken.children[2].content.endsWith(actualLabelJoint)) {
+      nextToken.children[2].content = nextToken.children[2].content.slice(0, -1).replace(/ *$/, '')
+    } else {
+      // if actualLabelJoint not exactly at end (rare), fallback to RegExp using escaped pattern
+      const jointPattern = actualLabelJoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(jointPattern + ' *$'), '')
+    }
+  } else {
+    const jointPattern = actualLabelJoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(jointPattern + ' *$'), '')
+  }
 
   const labelJointToken = {
     open: new state.Token('span_open', 'span', 1),
