@@ -280,3 +280,16 @@ console.log(md.render(src));
 //<p class="caption-img"><span class="caption-label">図<span class="caption-label-joint">　</span></span>キャプション</p>\n'
 ```
 
+## Option: Wrap caption body with span
+
+Wrap the caption body (everything after the label and optional filename) in a dedicated span element.
+
+```js
+md.use(mditPCaption, { wrapCaptionBody: true });
+
+const src = 'Figure. A cat.\n';
+console.log(md.render(src));
+//<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> <span class="caption-img-body">A cat.</span></p>
+```
+
+When `removeMarkNameInCaptionClass` is enabled, the wrapper class becomes `caption-body`.
