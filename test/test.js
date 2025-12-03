@@ -35,6 +35,12 @@ const suites = [
     },
   },
   { name: 'set-figure-number', file: 'examples-set-figure-number.txt', options: { setFigureNumber: true } },
+  { name: 'wrap-caption-body', file: 'examples-wrap-caption-body.txt', options: { wrapCaptionBody: true } },
+  {
+    name: 'wrap-caption-body-remove-label',
+    file: 'examples-wrap-caption-body-remove-label.txt',
+    options: { wrapCaptionBody: true, removeUnnumberedLabel: true, removeMarkNameInCaptionClass: true },
+  },
 ].map((suite) => ({
   ...suite,
   md: createMd(suite.options),

@@ -90,6 +90,7 @@ const mditPCaption = (md, option) => {
     removeUnnumberedLabelExceptMarks: [],
     setFigureNumber: false,
     removeMarkNameInCaptionClass: false,
+    wrapCaptionBody: false,
   }
   if (option) Object.assign(opt, option)
 
@@ -246,6 +247,7 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
     content: new state.Token('text', '', 0),
     close: new state.Token(labelTag + '_close', labelTag, -1),
   }
+  let labelMeta = null
 
   let classPrefix = opt.classPrefix + '-'
   if (!opt.removeMarkNameInCaptionClass) {
@@ -280,12 +282,12 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
   }
 
   if (actualLabel.num) {
-    addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt)
+    labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt)
   } else {
     if (opt.removeUnnumberedLabel) {
       if (opt.removeUnnumberedLabelExceptMarks.length > 0) {
         if (opt.removeUnnumberedLabelExceptMarks.includes(mark)) {
-          addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt)
+          labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt)
         } else {
           children[0].content = children[0].content.replace(/^ */, '')
         }
@@ -293,45 +295,104 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
         children[0].content = children[0].content.replace(/^ */, '')
       }
     } else {
-      addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt)
+      labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt)
     }
+  }
+  if (opt.wrapCaptionBody) {
+    wrapCaptionBody(state, nextToken, mark, labelMeta, opt)
   }
   return true
 }
 
 const addJointToken = (state, nextToken, mark, labelToken, actualLabelJoint, opt) => {
   nextToken.children.splice(0, 0, labelToken.first, labelToken.open, labelToken.content, labelToken.close)
-  if (!actualLabelJoint) { return; }
-  // Escape joint character for safe use in RegExp (e.g., '.' or ':' should be literal)
-  // Prefer simple string trimming when joint is a single character to avoid RegExp allocations
-  if (actualLabelJoint.length === 1) {
-    // remove actualLabelJoint and trailing spaces at end
-    if (nextToken.children[2].content.endsWith(actualLabelJoint)) {
-      nextToken.children[2].content = nextToken.children[2].content.slice(0, -1).replace(/ *$/, '')
+  if (actualLabelJoint) {
+    // Escape joint character for safe use in RegExp (e.g., '.' or ':' should be literal)
+    // Prefer simple string trimming when joint is a single character to avoid RegExp allocations
+    if (actualLabelJoint.length === 1) {
+      // remove actualLabelJoint and trailing spaces at end
+      if (nextToken.children[2].content.endsWith(actualLabelJoint)) {
+        nextToken.children[2].content = nextToken.children[2].content.slice(0, -1).replace(/ *$/, '')
+      } else {
+        // if actualLabelJoint not exactly at end (rare), fallback to RegExp using escaped pattern
+        const jointPattern = actualLabelJoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(jointPattern + ' *$'), '')
+      }
     } else {
-      // if actualLabelJoint not exactly at end (rare), fallback to RegExp using escaped pattern
       const jointPattern = actualLabelJoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(jointPattern + ' *$'), '')
     }
-  } else {
-    const jointPattern = actualLabelJoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(jointPattern + ' *$'), '')
+
+    const labelJointToken = {
+      open: new state.Token('span_open', 'span', 1),
+      content: new state.Token('text', '', 0),
+      close: new state.Token('span_close', 'span', -1),
+    }
+    let classPrefix = opt.classPrefix + '-'
+    if (!opt.removeMarkNameInCaptionClass) {
+      classPrefix += mark + '-'
+    }
+    labelJointToken.open.attrSet('class', classPrefix + 'label-joint')
+    labelJointToken.content.content = actualLabelJoint
+
+    nextToken.children.splice(3, 0, labelJointToken.open, labelJointToken.content, labelJointToken.close)
+  }
+  const labelCloseIndex = nextToken.children.indexOf(labelToken.close)
+  return { bodyStartIndex: labelCloseIndex + 1 }
+}
+
+const wrapCaptionBody = (state, nextToken, mark, labelMeta, opt) => {
+  const children = nextToken.children
+  let startIndex = 0
+  if (labelMeta && typeof labelMeta.bodyStartIndex === 'number') {
+    startIndex = labelMeta.bodyStartIndex
+  }
+  while (startIndex < children.length &&
+    children[startIndex].type === 'text' &&
+    children[startIndex].content === '') {
+    startIndex++
+  }
+  if (startIndex >= children.length) return
+  const bodyTokens = children.slice(startIndex)
+  if (!bodyTokens.length) return
+  children.splice(startIndex)
+
+  const preserveLeadingWhitespace = startIndex > 0
+  let leadingSpaceToken = null
+  if (preserveLeadingWhitespace &&
+      bodyTokens.length &&
+      bodyTokens[0].type === 'text') {
+    const leadingMatch = bodyTokens[0].content.match(/^[ 　]+/)
+    if (leadingMatch) {
+      leadingSpaceToken = new state.Token('text', '', 0)
+      leadingSpaceToken.content = leadingMatch[0]
+      bodyTokens[0].content = bodyTokens[0].content.slice(leadingMatch[0].length)
+      if (!bodyTokens[0].content) {
+        bodyTokens.shift()
+      }
+    }
   }
 
-  const labelJointToken = {
-    open: new state.Token('span_open', 'span', 1),
-    content: new state.Token('text', '', 0),
-    close: new state.Token('span_close', 'span', -1),
+  if (!bodyTokens.length) {
+    if (leadingSpaceToken) {
+      children.splice(startIndex, 0, leadingSpaceToken)
+    }
+    return
   }
+
+  const bodyOpen = new state.Token('span_open', 'span', 1)
   let classPrefix = opt.classPrefix + '-'
   if (!opt.removeMarkNameInCaptionClass) {
     classPrefix += mark + '-'
   }
-  labelJointToken.open.attrSet('class', classPrefix + 'label-joint')
-  labelJointToken.content.content = actualLabelJoint
-
-  nextToken.children.splice(3, 0, labelJointToken.open, labelJointToken.content, labelJointToken.close)
-  return
+  bodyOpen.attrSet('class', classPrefix + 'body')
+  const bodyClose = new state.Token('span_close', 'span', -1)
+  const insertTokens = []
+  if (leadingSpaceToken) {
+    insertTokens.push(leadingSpaceToken)
+  }
+  insertTokens.push(bodyOpen, ...bodyTokens, bodyClose)
+  children.splice(startIndex, 0, ...insertTokens)
 }
 
 export default mditPCaption
