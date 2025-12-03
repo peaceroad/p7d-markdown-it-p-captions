@@ -1,0 +1,489 @@
+[Markdown]
+Figure
+[HTML]
+<p>Figure</p>
+
+
+[Markdown]
+Figure 
+[HTML]
+<p>Figure</p>
+
+
+[Markdown]
+Figure.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span></p>
+
+
+[Markdown]
+Figure:
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span></p>
+
+
+[Markdown]
+Figure 1
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1</span></p>
+
+
+[Markdown]
+Figure A.1
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure A.1</span></p>
+
+
+[Markdown]
+Figure. A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A cat.</p>
+
+
+[Markdown]
+Figure: A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span> A cat.</p>
+
+
+[Markdown]
+Figure is a cat.
+[HTML]
+<p>Figure is a cat.</p>
+
+
+[Markdown]
+Figure 1. A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+
+
+[Markdown]
+Figure 1 is a cat.
+[HTML]
+<p>Figure 1 is a cat.</p>
+
+
+[Markdown]
+Figure A A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure A</span> A cat.</p>
+
+
+[Markdown]
+Figure A a cat.
+[HTML]
+<p>Figure A a cat.</p>
+
+
+[Markdown]
+Figure A a Cat.
+[HTML]
+<p>Figure A a Cat.</p>
+
+
+[Markdown]
+Figure 1 A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1</span> A cat.</p>
+
+
+[Markdown]
+Figure 1.A.1 A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1.A.1</span> A cat.</p>
+
+
+[Markdown]
+Figure 1 a cat.
+[HTML]
+<p>Figure 1 a cat.</p>
+
+
+[Markdown]
+Figure 1: A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">:</span></span> A cat.</p>
+
+
+[Markdown]
+Figure 1. a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> a cat.</p>
+
+
+[Markdown]
+図
+[HTML]
+<p>図</p>
+
+
+[Markdown]
+図：
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">：</span></span></p>
+
+
+[Markdown]
+図.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>
+
+
+[Markdown]
+図 
+[HTML]
+<p>図</p>
+
+
+[Markdown]
+図　
+[HTML]
+<p>図</p>
+
+
+[Markdown]
+図1
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1</span></p>
+
+
+[Markdown]
+図1.1
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1.1</span></p>
+
+
+[Markdown]
+図 猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図</span> 猫</p>
+
+
+[Markdown]
+図　猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">　</span></span>猫</p>
+
+
+[Markdown]
+図1　猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>猫</p>
+
+
+[Markdown]
+図1.1 猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1.1</span> 猫</p>
+
+
+[Markdown]
+図は猫
+[HTML]
+<p>図は猫</p>
+
+
+[Markdown]
+図1は猫
+[HTML]
+<p>図1は猫</p>
+
+
+[Markdown]
+図1.1は猫
+[HTML]
+<p>図1.1は猫</p>
+
+
+[Markdown]
+Figure 1. 猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> 猫</p>
+
+
+[Markdown]
+図11　A Cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図11<span class="caption-img-label-joint">　</span></span>A Cat.</p>
+
+
+[Markdown]
+Table 11. A table.
+[HTML]
+<p class="caption-table"><span class="caption-table-label">Table 11<span class="caption-table-label-joint">.</span></span> A table.</p>
+
+
+[Markdown]
+Table 11. 表
+[HTML]
+<p class="caption-table"><span class="caption-table-label">Table 11<span class="caption-table-label-joint">.</span></span> 表</p>
+
+
+[Markdown]
+Figure. a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> a cat.</p>
+
+
+[Markdown]
+Figure 12. a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 12<span class="caption-img-label-joint">.</span></span> a cat.</p>
+
+
+[Markdown]
+Figure A. a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure A<span class="caption-img-label-joint">.</span></span> a cat.</p>
+
+
+[Markdown]
+図A. a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図A<span class="caption-img-label-joint">.</span></span> a cat.</p>
+
+
+[Markdown]
+図A a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図A</span> a cat.</p>
+
+
+[Markdown]
+図A　a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図A<span class="caption-img-label-joint">　</span></span>a cat.</p>
+
+
+[Markdown]
+Figure.A A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure.A</span> A cat.</p>
+
+
+[Markdown]
+図：A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">：</span></span>A cat.</p>
+
+
+[Markdown]
+図1：A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">：</span></span>A cat.</p>
+
+
+[Markdown]
+図1.1. A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1.1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+
+
+[Markdown]
+図1.1.A Cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1.1.A</span> Cat.</p>
+
+
+[Markdown]
+図1: A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">:</span></span> A cat.</p>
+
+
+[Markdown]
+図1.1: A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1.1<span class="caption-img-label-joint">:</span></span> A cat.</p>
+
+
+[Markdown]
+Quote: A cat.
+[HTML]
+<p class="caption-blockquote"><span class="caption-blockquote-label">Quote<span class="caption-blockquote-label-joint">:</span></span> A cat.</p>
+
+
+[Markdown]
+リスト1 キャプション
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">リスト1</span> キャプション</p>
+
+
+[Markdown]
+Source. A paper.
+[HTML]
+<p class="caption-blockquote"><span class="caption-blockquote-label">Source<span class="caption-blockquote-label-joint">.</span></span> A paper.</p>
+
+
+[Markdown]
+Slide. a slide.
+[HTML]
+<p class="caption-slide"><span class="caption-slide-label">Slide<span class="caption-slide-label-joint">.</span></span> a slide.</p>
+
+
+[Markdown]
+Code 1 A cat.
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1</span> A cat.</p>
+
+
+[Markdown]
+Code 1　猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">　</span></span>猫</p>
+
+
+[Markdown]
+Code 1 猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1</span> 猫</p>
+
+
+[Markdown]
+Code 1. 猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">.</span></span> 猫</p>
+
+
+[Markdown]
+Code 1。猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">。</span></span>猫</p>
+
+
+[Markdown]
+Code.1　猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code.1<span class="caption-pre-code-label-joint">　</span></span>猫</p>
+
+
+[Markdown]
+Code. 猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> 猫</p>
+
+
+[Markdown]
+Code　猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">　</span></span>猫</p>
+
+
+[Markdown]
+Code 猫
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code</span> 猫</p>
+
+
+[Markdown]
+Code A
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code A</span></p>
+
+
+[Markdown]
+Code A.
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Code A<span class="caption-pre-code-label-joint">.</span></span></p>
+
+
+[Markdown]
+Code A a cat.
+[HTML]
+<p>Code A a cat.</p>
+
+
+[Markdown]
+fig 1. Test Caption
+[HTML]
+<p class="caption-img"><span class="caption-img-label">fig 1<span class="caption-img-label-joint">.</span></span> Test Caption</p>
+
+
+[Markdown]
+Code Testキャプション
+[HTML]
+<p>Code Testキャプション</p>
+
+
+[Markdown]
+Code 1キャプション
+[HTML]
+<p>Code 1キャプション</p>
+
+
+[Markdown]
+図 Testキャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図</span> Testキャプション</p>
+
+
+[Markdown]
+図 1Testキャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図</span> 1Testキャプション</p>
+
+
+[Markdown]
+図　Testキャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">　</span></span>Testキャプション</p>
+
+
+[Markdown]
+- コマンド：`pwd`
+[HTML]
+<ul>
+<li>コマンド：<code>pwd</code></li>
+</ul>
+
+
+[Markdown]
+段落
+
+- リスト
+- コマンド：`pwd`
+
+段落
+[HTML]
+<p>段落</p>
+<ul>
+<li>リスト</li>
+<li>コマンド：<code>pwd</code></li>
+</ul>
+<p>段落</p>
+
+
+[Markdown]
+リスト キャプション
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">リスト</span> キャプション</p>
+
+
+[Markdown]
+Source code. A caption.
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Source code<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>
+
+
+[Markdown]
+Source code 1. A caption.
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Source code 1<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>
+
+
+[Markdown]
+Source code A.1. A caption.
+[HTML]
+<p class="caption-pre-code"><span class="caption-pre-code-label">Source code A.1<span class="caption-pre-code-label-joint">.</span></span> A caption.</p>
+
+
+[Markdown]
+> ![](image.png)
+>
+> Figure. A caption.
+[HTML]
+<blockquote>
+<p><img src="image.png" alt=""></p>
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A caption.</p>
+</blockquote>

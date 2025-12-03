@@ -1,0 +1,4 @@
+[Markdown]
+Figure. A cat.
+[HTML]
+<p class="f-img"><span class="f-img-label">Figure<span class="f-img-label-joint">.</span></span> A cat.</p>

@@ -1,0 +1,52 @@
+[Markdown]
+Figure. A caption.
+[HTML]
+<p class="caption-img">A caption.</p>
+
+
+[Markdown]
+Figure: A caption.
+[HTML]
+<p class="caption-img">A caption.</p>
+
+
+[Markdown]
+Figure 1. A caption.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A caption.</p>
+
+
+[Markdown]
+図 キャプション
+[HTML]
+<p class="caption-img">キャプション</p>
+
+
+[Markdown]
+図　キャプション
+[HTML]
+<p class="caption-img">キャプション</p>
+
+
+[Markdown]
+図：キャプション
+[HTML]
+<p class="caption-img">キャプション</p>
+
+
+[Markdown]
+図1 キャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1</span> キャプション</p>
+
+
+[Markdown]
+図1　キャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>キャプション</p>
+
+
+[Markdown]
+図1：キャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">：</span></span>キャプション</p>

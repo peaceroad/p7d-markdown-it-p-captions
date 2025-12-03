@@ -1,0 +1,61 @@
+[Markdown]
+Figure. A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+
+
+[Markdown]
+Figure. A cat.
+
+Figure. A dog.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+<p class="caption-img"><span class="caption-img-label">Figure 2<span class="caption-img-label-joint">.</span></span> A dog.</p>
+
+
+[Markdown]
+Figure 1. A cat.
+
+Figure. A dog.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+<p class="caption-img"><span class="caption-img-label">Figure 2<span class="caption-img-label-joint">.</span></span> A dog.</p>
+
+
+[Markdown]
+Figure. A cat.
+
+Figure 2. A dog.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+<p class="caption-img"><span class="caption-img-label">Figure 2<span class="caption-img-label-joint">.</span></span> A dog.</p>
+
+
+[Markdown]
+図　キャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>キャプション</p>
+
+
+[Markdown]
+図　猫
+
+図　犬
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>猫</p>
+<p class="caption-img"><span class="caption-img-label">図2<span class="caption-img-label-joint">　</span></span>犬</p>
+
+
+[Markdown]
+Table. Foods.
+[HTML]
+<p class="caption-table"><span class="caption-table-label">Table 1<span class="caption-table-label-joint">.</span></span> Foods.</p>
+
+
+[Markdown]
+Table. Foods.
+
+Table. Drinks.
+[HTML]
+<p class="caption-table"><span class="caption-table-label">Table 1<span class="caption-table-label-joint">.</span></span> Foods.</p>
+<p class="caption-table"><span class="caption-table-label">Table 2<span class="caption-table-label-joint">.</span></span> Drinks.</p>

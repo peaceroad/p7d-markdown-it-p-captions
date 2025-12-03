@@ -1,0 +1,190 @@
+[Markdown]
+Figure
+[HTML]
+<p>Figure</p>
+
+
+[Markdown]
+Figure 
+[HTML]
+<p>Figure</p>
+
+
+[Markdown]
+Figure.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span></p>
+
+
+[Markdown]
+Figure:
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span></p>
+
+
+[Markdown]
+Figure 1
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1</span></p>
+
+
+[Markdown]
+Figure A.1
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure A.1</span></p>
+
+
+[Markdown]
+Figure. A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A cat.</p>
+
+
+[Markdown]
+Figure: A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span> A cat.</p>
+
+
+[Markdown]
+Figure is a cat.
+[HTML]
+<p>Figure is a cat.</p>
+
+
+[Markdown]
+Figure 1. A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+
+
+[Markdown]
+Figure 1 is a cat.
+[HTML]
+<p>Figure 1 is a cat.</p>
+
+
+[Markdown]
+Figure A A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure A</span> A cat.</p>
+
+
+[Markdown]
+Figure 1 A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1</span> A cat.</p>
+
+
+[Markdown]
+Figure 1 a cat.
+[HTML]
+<p>Figure 1 a cat.</p>
+
+
+[Markdown]
+Figure 1: A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1<span class="caption-img-label-joint">:</span></span> A cat.</p>
+
+
+[Markdown]
+図
+[HTML]
+<p>図</p>
+
+
+[Markdown]
+図 
+[HTML]
+<p>図</p>
+
+
+[Markdown]
+図.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>
+
+
+[Markdown]
+図1
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">図1</span></p>
+
+
+[Markdown]
+図1.1
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">図1.1</span></p>
+
+
+[Markdown]
+図 猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図</span> 猫</p>
+
+
+[Markdown]
+図1　猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">図1<span class="caption-img-label-joint">　</span></span>猫</p>
+
+
+[Markdown]
+図1.1 猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">図1.1</span> 猫</p>
+
+
+[Markdown]
+図は猫
+[HTML]
+<p>図は猫</p>
+
+
+[Markdown]
+図1は猫
+[HTML]
+<p>図1は猫</p>
+
+
+[Markdown]
+図1.1は猫
+[HTML]
+<p>図1.1は猫</p>
+
+
+[Markdown]
+Figure 1. 猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure 1<span class="caption-img-label-joint">.</span></span> 猫</p>
+
+
+[Markdown]
+図11　A Cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">図11<span class="caption-img-label-joint">　</span></span>A Cat.</p>
+
+
+[Markdown]
+Table 11. A table.
+[HTML]
+<p class="caption-table"><span class="caption-table-label label-has-num">Table 11<span class="caption-table-label-joint">.</span></span> A table.</p>
+
+
+[Markdown]
+Table 11. 表
+[HTML]
+<p class="caption-table"><span class="caption-table-label label-has-num">Table 11<span class="caption-table-label-joint">.</span></span> 表</p>
+
+
+[Markdown]
+Figure. a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> a cat.</p>
+
+
+[Markdown]
+Figure 12. a cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label label-has-num">Figure 12<span class="caption-img-label-joint">.</span></span> a cat.</p>

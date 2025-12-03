@@ -1,0 +1,10 @@
+[Markdown]
+図 キャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図</span> キャプション</p>
+
+
+[Markdown]
+図　キャプション
+[HTML]
+<p class="caption-img"><span class="caption-img-label">図</span> キャプション</p>

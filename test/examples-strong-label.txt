@@ -1,0 +1,4 @@
+[Markdown]
+Code. Call a cat.
+[HTML]
+<p class="caption-pre-code"><strong class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></strong> Call a cat.</p>
