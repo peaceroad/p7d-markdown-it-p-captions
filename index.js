@@ -122,20 +122,11 @@ const mditPCaption = (md, option) => {
       img: 0,
       table: 0,
     }
-    const caption = {
-      mark: '',
-      name: '',
-      nameSuffix: '',
-      isPrev: false,
-      isNext: false,
-    }
-    const sp = {
-      isIframeTypeBlockquote: false,
-      isVideoIframe: false,
-    }
     const len = state.tokens.length
     for (let n = 0; n < len - 1; n++) {
-      setCaptionParagraph(n, state, caption, fNum, sp, opt)
+      // Core plugin does not track caption/sp state, but helper keeps these args
+      // for downstream integrations such as p7d-markdown-it-figure-with-p-caption.
+      setCaptionParagraph(n, state, null, fNum, null, opt)
     }
   })
 }
@@ -153,6 +144,11 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
     joint: '',
   }
   
+  // caption/sp may be provided by integrators to enforce cross-block constraints
+  const captionName = caption && caption.name ? caption.name : ''
+  const spIsIframeTypeBlockquote = sp && sp.isIframeTypeBlockquote
+  const spIsVideoIframe = sp && sp.isVideoIframe
+
   for (const mark of markRegKeys) {
     const hasMarkLabel = nextToken.content.match(markReg[mark])
     if (!hasMarkLabel) continue
@@ -165,17 +161,17 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
       actualLabel.num = hasMarkLabel[2]
     }
 
-    if (caption.name) {
-      if (caption.name === 'pre-samp' && mark === 'img' && actualLabel.mark === '図') continue // for 図 sampキャプション
-      if (caption.name !== mark && actualLabel.mark === 'リスト') continue // for リスト sampキャプション
+    if (captionName) {
+      if (captionName === 'pre-samp' && mark === 'img' && actualLabel.mark === '図') continue // for 図 sampキャプション
+      if (captionName !== mark && actualLabel.mark === 'リスト') continue // for リスト sampキャプション
     }
 
-    if (sp.isIframeTypeBlockquote) {
-      if (mark !== 'blockquote' && caption.name !== 'blockquote') return
-    } else if (sp.isVideoIframe) {
-      if (mark !== 'video' && caption.name !== 'iframe') return
-    } else if (caption.name) {
-      if(caption.name !== 'iframe' && caption.name !== mark) return
+    if (spIsIframeTypeBlockquote) {
+      if (mark !== 'blockquote' && captionName !== 'blockquote') return
+    } else if (spIsVideoIframe) {
+      if (mark !== 'video' && captionName !== 'iframe') return
+    } else if (captionName) {
+      if(captionName !== 'iframe' && captionName !== mark) return
     }
 
     token.attrJoin('class', opt.classPrefix + '-' + mark)

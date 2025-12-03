@@ -2,9 +2,10 @@ import assert from 'assert'
 import fs from 'fs'
 import path from 'path'
 import mdit from 'markdown-it'
+import Token from 'markdown-it/lib/token.mjs'
 import { fileURLToPath } from 'url'
 
-import mditPCaption from '../index.js'
+import mditPCaption, { setCaptionParagraph } from '../index.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -45,6 +46,24 @@ const suites = [
   ...suite,
   md: createMd(suite.options),
 }))
+
+const parserForState = mdit()
+// Mirrors the default plugin options; used when calling setCaptionParagraph directly
+const baseOptionForSetCaption = {
+  languages: ['en', 'ja'],
+  classPrefix: 'caption',
+  dquoteFilename: false,
+  strongFilename: false,
+  hasNumClass: false,
+  bLabel: false,
+  strongLabel: false,
+  jointSpaceUseHalfWidth: false,
+  removeUnnumberedLabel: false,
+  removeUnnumberedLabelExceptMarks: [],
+  setFigureNumber: false,
+  removeMarkNameInCaptionClass: false,
+  wrapCaptionBody: false,
+}
 
 const normalizeContent = (text) => text.replace(/\r\n/g, '\n')
 
@@ -92,5 +111,61 @@ let pass = true
 suites.forEach((suite) => {
   pass = runSuite(suite) && pass
 })
+
+// Clone defaults and parse markdown to ensure caption helper sees a realistic state
+const cloneBaseOption = () => JSON.parse(JSON.stringify(baseOptionForSetCaption))
+const createStateForMarkdown = (markdown) => ({
+  tokens: parserForState.parse(markdown, {}),
+  Token,
+})
+
+// Helper that applying setCaptionParagraph to the first paragraph token simulates
+// what figure-with-caption does and lets us assert the gating behaviors.
+const applySetCaption = (markdown, caption, sp, opt = cloneBaseOption()) => {
+  const state = createStateForMarkdown(markdown)
+  const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+  if (paragraphIndex === -1) {
+    throw new Error('No paragraph_open token found for markdown: ' + markdown)
+  }
+  const fNum = { img: 0, table: 0 }
+  setCaptionParagraph(paragraphIndex, state, caption, fNum, sp, opt)
+  return { state, paragraphIndex }
+}
+
+// Run targeted tests that exercise the caption/sp guards and exported behavior.
+const runSetCaptionParagraphTests = () => {
+  let ok = true
+  const runCase = (name, markdown, captionArg, spArg, expectedClass) => {
+    const caption = captionArg ? { ...captionArg } : captionArg
+    const sp = spArg ? { ...spArg } : spArg
+    const { state, paragraphIndex } = applySetCaption(markdown, caption, sp)
+    const actualClass = state.tokens[paragraphIndex].attrGet('class') || null
+    try {
+      assert.strictEqual(actualClass, expectedClass)
+      if (captionArg) assert.strictEqual(caption.name, captionArg.name)
+      if (spArg && Object.prototype.hasOwnProperty.call(spArg, 'isVideoIframe')) {
+        assert.strictEqual(sp.isVideoIframe, spArg.isVideoIframe)
+      }
+      if (spArg && Object.prototype.hasOwnProperty.call(spArg, 'isIframeTypeBlockquote')) {
+        assert.strictEqual(sp.isIframeTypeBlockquote, spArg.isIframeTypeBlockquote)
+      }
+    } catch (err) {
+      ok = false
+      console.log(`setCaptionParagraph test "${name}" failed.`)
+      console.log('Markdown:', markdown)
+      console.log('Expected class:', expectedClass, 'Actual class:', actualClass)
+    }
+  }
+
+  runCase('default detection', 'Figure. A cat.\n', undefined, undefined, 'caption-img')
+  runCase('caption guard mismatch', 'Figure. A cat.\n', { name: 'table' }, undefined, null)
+  runCase('blockquote guard matches', 'Quote. Cite.\n', { name: 'blockquote' }, { isIframeTypeBlockquote: true }, 'caption-blockquote')
+  runCase('blockquote guard mismatch', 'Figure. A cat.\n', undefined, { isIframeTypeBlockquote: true }, null)
+  runCase('video iframe allowed', 'Video. Clip.\n', { name: 'iframe' }, { isVideoIframe: true }, 'caption-video')
+  runCase('video iframe mismatch', 'Figure. A cat.\n', { name: 'img' }, { isVideoIframe: true }, null)
+  return ok
+}
+
+pass = runSetCaptionParagraphTests() && pass
 
 if (pass) console.log('Passed all test.')
