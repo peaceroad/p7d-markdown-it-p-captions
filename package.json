@@ -4,6 +4,13 @@
   "description": "A markdown-it plugin. For a paragraph, it determines if it is a caption from the string at the beginning of the paragraph and adds a class attribute value to indicate that it is a caption.",
   "main": "index.js",
   "type": "module",
+  "files": [
+    "index.js",
+    "lang.js",
+    "lang/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node test/test.js"
   },
