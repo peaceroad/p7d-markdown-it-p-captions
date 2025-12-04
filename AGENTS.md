@@ -1,7 +1,7 @@
 # AGENTS notes for p7d-markdown-it-p-captions
 
 ## README-level workflow
-- The plugin extends markdown-it and rewrites paragraph tokens when the inline text begins with one of the documented caption marks (Figure/Fig/Illust/Photo, Movie/Video, Table, Code/SourceCode/Program, Console/Terminal/Prompt, Quote/Source/Citation, Slide, plus Japanese counterparts).
+- The plugin extends markdown-it and rewrites paragraph tokens when the inline text begins with one of the documented caption marks (Figure/Fig/Illust/Photo, Movie/Video, Audio, Table, Code/SourceCode/Program, Console/Terminal/Prompt, Quote/Source/Citation, Slide, plus Japanese counterparts).
 - After the mark it expects delimiters drawn from `[.:．。：　]`; English labels also want a space after the delimiter unless the caption body starts with non-latin text, while Japanese labels only accept half-width spaces as delimiters.
 - Optional serial numbers composed of `0-9A-Z.-` may appear between the mark and delimiter; when a number is present the delimiter may be omitted if a space precedes the caption body and, for English text, that body begins with an uppercase letter.
 - `Figure.1` is also considered valid (dot immediately after Figure, number immediately after the dot, then a space and an uppercase caption body).

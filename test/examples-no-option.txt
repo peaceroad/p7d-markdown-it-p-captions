@@ -487,3 +487,13 @@ Source code A.1. A caption.
 <p><img src="image.png" alt=""></p>
 <p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A caption.</p>
 </blockquote>
+
+[Markdown]
+Audio. A podcast.
+[HTML]
+<p class="caption-audio"><span class="caption-audio-label">Audio<span class="caption-audio-label-joint">.</span></span> A podcast.</p>
+
+[Markdown]
+音声 キャプション
+[HTML]
+<p class="caption-audio"><span class="caption-audio-label">音声</span> キャプション</p>

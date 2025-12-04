@@ -34,6 +34,7 @@ First, the strings listed in the table below are required as the first string of
 | `caption-pre-samp` | console, terminal, prompt, command, commandprompt[^table-note1], 端末, ターミナル, コマンド, コマンドプロンプト, プロンプト, リスト [^table-note2], 図[^table-note2] |
 | `caption-blockquote` | source, cited, citation, quote, blockquote[^table-note1], 引用, 引用元, 出典 |
 | `caption-slide`| slide, スライド, 発表資料 |
+| `caption-audio`| audio, sound, 音, 音声, 音楽, サウンド |
 
 [^table-note1]: 'sourcecode', 'codeblock', 'commandprompt', 'blockquote' allow spaces between words. ex. For example, 'source code' is acceptable.
 [^table-note2]: 'リスト' and '図' is also applicable only when used via [p7d-markdown-it-figure-with-p-caption](https://github.com/peaceroad/p7d-markdown-it-figure-with-p-caption).

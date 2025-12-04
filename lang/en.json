@@ -9,6 +9,7 @@
     "pre-code": "((?:source ?)?code(?: ?block)?|program)",
     "pre-samp": "(terminal|command(?: ?prompt)?|prompt)",
     "blockquote": "((?:block ?)?quote|source|cit(?:ed|ation))",
-    "slide": "(slide)"
+    "slide": "(slide)",
+    "audio": "(audio|sound)"
   }
 }
