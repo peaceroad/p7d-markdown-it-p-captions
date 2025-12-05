@@ -294,3 +294,21 @@ console.log(md.render(src));
 ```
 
 When `removeMarkNameInCaptionClass` is enabled, the wrapper class becomes `caption-body`.
+
+## Option: Automatically number figures and tables
+
+Turn on automatic numbering for image (`caption-img`) and table (`caption-table`) captions that do not already include a number.
+
+```js
+md.use(mditPCaption, { setFigureNumber: true });
+
+const src = 'Figure. A cat.\n\nTable. A list.\n\nFigure. Another cat.\n';
+console.log(md.render(src));
+// <p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>
+// <p class="caption-table"><span class="caption-table-label">Table 1<span class="caption-table-label-joint">.</span></span> A list.</p>
+// <p class="caption-img"><span class="caption-img-label">Figure 2<span class="caption-img-label-joint">.</span></span> Another cat.</p>
+```
+
+- Counters are maintained separately for figures and tables and reset for every Markdown render.
+- Captions that already contain a number keep that number, and the counter is updated so the next auto-generated value continues the sequence.
+
