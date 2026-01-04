@@ -308,13 +308,12 @@ label/body span classes also reuse those figure class bases.
 md.use(mditPCaption, { labelClassFollowsFigure: true });
 ```
 
-You can override bases for specific figure class strings:
+You can override bases for specific figure class strings. When `figureToLabelClassMap` is provided, `labelClassFollowsFigure` is enabled automatically unless you explicitly set it to `false`.
 
 ```js
 md.use(mditPCaption, {
-  labelClassFollowsFigure: true,
   figureToLabelClassMap: {
-    'figure-img': 'custom-figure',
+    'figure-img': 'media-figure', // => media-figure-label / media-figure-label-joint / media-figure-body
   },
 });
 ```
