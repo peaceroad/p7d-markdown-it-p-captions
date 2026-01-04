@@ -4,9 +4,9 @@ p7d-markdown-it-p-captions is a markdown-it plugin. For a paragraph, it determin
 
 ```js
 import mdit from 'markdown-it'
-import mditPCption from 'p7d-markdown-it-p-captions'
+import mditPCaption from 'p7d-markdown-it-p-captions'
 
-const md = mdit().use(mditPCptions)
+const md = mdit().use(mditPCaption)
 
 const src = 'Figure 1. A caption.\n';
 console.log(md.render(src));
@@ -16,7 +16,7 @@ console.log(md.render(src));
 If you want to change the prefix of the class name from ‘caption’, set the option as follows.
 
 ```js
-const md = mdit().use(captions, {classPrefix: 'f'})
+const md = mdit().use(mditPCaption, { classPrefix: 'f' })
 
 const src = 'Figure 1. A caption.\n';
 console.log(md.render(src));
@@ -39,7 +39,7 @@ First, the strings listed in the table below are required as the first string of
 [^table-note1]: 'sourcecode', 'codeblock', 'commandprompt', 'blockquote' allow spaces between words. ex. For example, 'source code' is acceptable.
 [^table-note2]: 'リスト' and '図' is also applicable only when used via [p7d-markdown-it-figure-with-p-caption](https://github.com/peaceroad/p7d-markdown-it-figure-with-p-caption).
 
-Additionally, a delimiter is required after these strings (`[.:．.:　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese label, only half-width spaces can be used as delimiters.
+Additionally, a delimiter is required after these strings (`[.:．。：　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese label, only half-width spaces can be used as delimiters.
 
 ```md
 Fig. A caption
@@ -226,6 +226,24 @@ console.log(md.render(src));
 //<p class="caption-pre-code"><strong class="caption-pre-code-label">Code 1<span class="caption-pre-code-label-joint">.</span></strong> A caption.</p>\n'
 ```
 
+## Option: Use label prefix marker
+
+Allow a marker before the label and strip it when a caption is detected.
+
+```js
+md.use(mditPCaption, { labelPrefixMarker: '▼' });
+
+const src = '▼Figure. A caption.\n';
+console.log(md.render(src));
+// <p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A caption.</p>\n
+```
+
+`labelPrefixMarker` also accepts an array (only the first two entries are used):
+
+```js
+md.use(mditPCaption, { labelPrefixMarker: ['▼', '▲'] });
+```
+
 ## Option: Convert full-width space in label joint to half-width
 
 ```js
@@ -281,6 +299,26 @@ console.log(md.render(src));
 //<p class="caption-img"><span class="caption-label">図<span class="caption-label-joint">　</span></span>キャプション</p>\n'
 ```
 
+## Option: Mirror figure classes for label/body
+
+When `labelClassFollowsFigure` is enabled and `sp.figureClassName` is provided by an integrator,
+label/body span classes also reuse those figure class bases.
+
+```js
+md.use(mditPCaption, { labelClassFollowsFigure: true });
+```
+
+You can override bases for specific figure class strings:
+
+```js
+md.use(mditPCaption, {
+  labelClassFollowsFigure: true,
+  figureToLabelClassMap: {
+    'figure-img': 'custom-figure',
+  },
+});
+```
+
 ## Option: Wrap caption body with span
 
 Wrap the caption body (everything after the label and optional filename) in a dedicated span element.
@@ -311,4 +349,3 @@ console.log(md.render(src));
 
 - Counters are maintained separately for figures and tables and reset for every Markdown render.
 - Captions that already contain a number keep that number, and the counter is updated so the next auto-generated value continues the sequence.
-
