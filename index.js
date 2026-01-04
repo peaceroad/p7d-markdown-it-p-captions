@@ -207,6 +207,7 @@ const buildCaptionClassNames = (mark, suffix, sp, opt) => {
 }
 
 const mditPCaption = (md, option) => {
+  const hasExplicitLabelClassFollowsFigure = option && Object.prototype.hasOwnProperty.call(option, 'labelClassFollowsFigure')
   const opt = {
     languages: ['en', 'ja'], // limit detection to lang/*.json entries; unknown codes are ignored
     classPrefix: 'caption',
@@ -226,6 +227,9 @@ const mditPCaption = (md, option) => {
     labelPrefixMarker: null, // optional leading marker(s) before label, e.g. '*' or ['*', '>']
   }
   if (option) Object.assign(opt, option)
+  if (!hasExplicitLabelClassFollowsFigure && opt.figureToLabelClassMap) {
+    opt.labelClassFollowsFigure = true
+  }
   if (Array.isArray(opt.removeUnnumberedLabelExceptMarks) && opt.removeUnnumberedLabelExceptMarks.length > 0) {
     opt.removeUnnumberedLabelExceptMarksSet = new Set(opt.removeUnnumberedLabelExceptMarks)
   } else {

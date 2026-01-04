@@ -25,6 +25,7 @@
 ## 5. Figure-Class Mirroring
 - When `labelClassFollowsFigure` is true, label/body class bases come from `sp.figureClassName`.
 - `figureToLabelClassMap` can override bases per figure class.
+- If `figureToLabelClassMap` is set and `labelClassFollowsFigure` is not explicitly configured, label mirroring is enabled automatically.
 - Bases are normalized and cached on `sp` to avoid recomputing per label.
 
 ## 6. Numbering
