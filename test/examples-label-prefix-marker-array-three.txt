@@ -1,0 +1,4 @@
+[Markdown]
+◇Figure. Caption.
+[HTML]
+<p>◇Figure. Caption.</p>

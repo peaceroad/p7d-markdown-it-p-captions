@@ -1,0 +1,4 @@
+[Markdown]
+▲Figure. Caption.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> Caption.</p>

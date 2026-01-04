@@ -24,6 +24,17 @@ const suites = [
   { name: 'has-num-class', file: 'examples-has-num-class.txt', options: { hasNumClass: true } },
   { name: 'b-label', file: 'examples-b-label.txt', options: { bLabel: true } },
   { name: 'strong-label', file: 'examples-strong-label.txt', options: { strongLabel: true } },
+  { name: 'label-prefix-marker', file: 'examples-label-prefix-marker.txt', options: { labelPrefixMarker: '▼' } },
+  {
+    name: 'label-prefix-marker-array',
+    file: 'examples-label-prefix-marker-array.txt',
+    options: { labelPrefixMarker: ['▼', '▲'] },
+  },
+  {
+    name: 'label-prefix-marker-array-three',
+    file: 'examples-label-prefix-marker-array-three.txt',
+    options: { labelPrefixMarker: ['▼', '▲', '◇'] },
+  },
   { name: 'joint-space-use-half-width', file: 'examples-joint-space-use-half-width.txt', options: { jointSpaceUseHalfWidth: true } },
   { name: 'remove-unnumbered-label', file: 'examples-remove-unnumbered-label.txt', options: { removeUnnumberedLabel: true } },
   { name: 'remove-unnumbered-label-except-blockquote', file: 'examples-remove-unnumbered-label-except-blockquote.txt', options: { removeUnnumberedLabelExceptMarks: ['blockquote'] } },

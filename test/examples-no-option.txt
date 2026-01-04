@@ -497,3 +497,9 @@ Audio. A podcast.
 音声 キャプション
 [HTML]
 <p class="caption-audio"><span class="caption-audio-label">音声</span> キャプション</p>
+
+
+[Markdown]
+▼図1　キャプション
+[HTML]
+<p>▼図1　キャプション</p>

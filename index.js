@@ -76,6 +76,56 @@ let markReg = getMarkReg(allLangs)
 let markRegKeys = Object.keys(markReg)
 let markRegCache = {}
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const normalizeLabelPrefixMarkers = (value) => {
+  if (typeof value === 'string') {
+    return value ? [value] : []
+  }
+  if (Array.isArray(value)) {
+    const normalized = value.map(entry => String(entry)).filter(Boolean)
+    return normalized.length > 2 ? normalized.slice(0, 2) : normalized
+  }
+  return []
+}
+const buildLabelPrefixMarkerReg = (value) => {
+  const markers = normalizeLabelPrefixMarkers(value)
+  if (!markers.length) return null
+  const pattern = markers.map(escapeRegExp).join('|')
+  return new RegExp('^(?:' + pattern + ')(?:[ \\t　]+)?')
+}
+const stripLeadingPrefix = (text, prefix) => {
+  if (typeof text !== 'string' || !text || !prefix) return text
+  if (text.startsWith(prefix)) return text.slice(prefix.length)
+  return text
+}
+const stripLabelPrefixMarker = (inlineToken, markerText) => {
+  if (!inlineToken || !markerText) return
+  if (typeof inlineToken.content === 'string') {
+    inlineToken.content = stripLeadingPrefix(inlineToken.content, markerText)
+  }
+  if (inlineToken.children && inlineToken.children.length) {
+    for (let i = 0; i < inlineToken.children.length; i++) {
+      const child = inlineToken.children[i]
+      if (child && child.type === 'text' && typeof child.content === 'string') {
+        child.content = stripLeadingPrefix(child.content, markerText)
+        break
+      }
+    }
+  }
+}
+
+const isAsciiAlphaCode = (code) => {
+  return (code >= 0x41 && code <= 0x5a) || (code >= 0x61 && code <= 0x7a)
+}
+
+const isLikelyCaptionStart = (text) => {
+  if (!text) return false
+  const code = text.charCodeAt(0)
+  if (code <= 0x20 || code === 0x3000) return false
+  if (code <= 0x7f) return isAsciiAlphaCode(code)
+  return true
+}
+
 const figureLabelSuffixStripReg = /-(?:label(?:-joint)?|body)$/
 const figureBasesCacheKey = Symbol('figureLabelBasesCache')
 
@@ -173,8 +223,15 @@ const mditPCaption = (md, option) => {
     wrapCaptionBody: false,
     labelClassFollowsFigure: false, // when true, reuse sp.figureClassName (or map overrides) for label/body spans
     figureToLabelClassMap: null, // optional overrides: { figureClassName: 'custom-label-base another-base' }
+    labelPrefixMarker: null, // optional leading marker(s) before label, e.g. '*' or ['*', '>']
   }
   if (option) Object.assign(opt, option)
+  if (Array.isArray(opt.removeUnnumberedLabelExceptMarks) && opt.removeUnnumberedLabelExceptMarks.length > 0) {
+    opt.removeUnnumberedLabelExceptMarksSet = new Set(opt.removeUnnumberedLabelExceptMarks)
+  } else {
+    opt.removeUnnumberedLabelExceptMarksSet = null
+  }
+  opt.labelPrefixMarkerReg = buildLabelPrefixMarkerReg(opt.labelPrefixMarker)
 
   // compare sorted keys to avoid rebuild when order differs
   const langKey = opt.languages.slice().sort().join(',')
@@ -219,6 +276,13 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   if (token.type !== 'paragraph_open') return caption
   if (n > 1 && tokens[n-1].type === 'list_item_open') return caption
   const nextToken = tokens[n+1]
+  if (!nextToken || nextToken.type !== 'inline') return caption
+  const content = typeof nextToken.content === 'string' ? nextToken.content : ''
+  const markerMatch = opt.labelPrefixMarkerReg ? content.match(opt.labelPrefixMarkerReg) : null
+  if (!isLikelyCaptionStart(content) && !markerMatch) return caption
+  const matchTarget = markerMatch ? content.slice(markerMatch[0].length) : content
+  if (!matchTarget) return caption
+  if (markerMatch && !isLikelyCaptionStart(matchTarget)) return caption
   const actualLabel = {
     content: '',
     mark: '',
@@ -231,8 +295,9 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   const spIsIframeTypeBlockquote = sp && sp.isIframeTypeBlockquote
   const spIsVideoIframe = sp && sp.isVideoIframe
 
-  for (const mark of markRegKeys) {
-    const hasMarkLabel = nextToken.content.match(markReg[mark])
+  for (let i = 0; i < markRegKeys.length; i++) {
+    const mark = markRegKeys[i]
+    const hasMarkLabel = matchTarget.match(markReg[mark])
     if (!hasMarkLabel) continue
 
     if (hasMarkLabel[1] === undefined) {
@@ -254,6 +319,10 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
       if (mark !== 'video' && captionName !== 'iframe') return
     } else if (captionName) {
       if(captionName !== 'iframe' && captionName !== mark) return
+    }
+
+    if (markerMatch) {
+      stripLabelPrefixMarker(nextToken, markerMatch[0])
     }
 
     token.attrJoin('class', opt.classPrefix + '-' + mark)
@@ -283,17 +352,23 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   }
 }
 
+const replaceLeadingText = (text, mark, replacement) => {
+  if (typeof text !== 'string' || !text || !mark) return text
+  if (text.startsWith(mark)) return replacement + text.slice(mark.length)
+  return text
+}
+
 const setFigureNumber = (n, state, mark, actualLabel, fNum) => {
   const nextToken = state.tokens[n+1]
   fNum[mark]++
   let vNum = fNum[mark]
-  let regCont = '^' + actualLabel.mark
   let replacedCont = actualLabel.mark + (/^[a-zA-Z]/.test(actualLabel.mark) ? ' ' : '') + vNum
   actualLabel.num = vNum
-  const reg = new RegExp(regCont)
-  nextToken.content = nextToken.content.replace(reg, replacedCont)
-  nextToken.children[0].content = nextToken.children[0].content.replace(reg, replacedCont)
-  actualLabel.content = actualLabel.content.replace(reg, replacedCont)
+  nextToken.content = replaceLeadingText(nextToken.content, actualLabel.mark, replacedCont)
+  if (nextToken.children && nextToken.children[0]) {
+    nextToken.children[0].content = replaceLeadingText(nextToken.children[0].content, actualLabel.mark, replacedCont)
+  }
+  actualLabel.content = replaceLeadingText(actualLabel.content, actualLabel.mark, replacedCont)
   return
 }
 
@@ -362,8 +437,9 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
     labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
   } else {
     if (opt.removeUnnumberedLabel) {
-      if (opt.removeUnnumberedLabelExceptMarks.length > 0) {
-        if (opt.removeUnnumberedLabelExceptMarks.includes(mark)) {
+      const exceptMarks = opt.removeUnnumberedLabelExceptMarksSet
+      if (exceptMarks && exceptMarks.size > 0) {
+        if (exceptMarks.has(mark)) {
           labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
         } else {
           children[0].content = children[0].content.replace(/^ */, '')
