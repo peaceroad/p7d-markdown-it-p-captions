@@ -74,7 +74,12 @@ const getMarkReg = (langs) => {
 
 let markReg = getMarkReg(allLangs)
 let markRegKeys = Object.keys(markReg)
+let markRegEntries = markRegKeys.map((key) => [key, markReg[key]])
 let markRegCache = {}
+
+const refreshMarkRegEntries = () => {
+  markRegEntries = markRegKeys.map((key) => [key, markReg[key]])
+}
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const normalizeLabelPrefixMarkers = (value) => {
@@ -259,6 +264,7 @@ const mditPCaption = (md, option) => {
       markRegCache[langKey] = { markReg, markRegKeys }
     }
   }
+  refreshMarkRegEntries()
 
   md.core.ruler.after('inline', 'p-caption', (state) => {
     const fNum = {
@@ -287,34 +293,30 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   const matchTarget = markerMatch ? content.slice(markerMatch[0].length) : content
   if (!matchTarget) return caption
   if (markerMatch && !isLikelyCaptionStart(matchTarget)) return caption
-  const actualLabel = {
-    content: '',
-    mark: '',
-    num: '',
-    joint: '',
-  }
-  
+
   // caption/sp may be provided by integrators to enforce cross-block constraints
   const captionName = caption && caption.name ? caption.name : ''
   const spIsIframeTypeBlockquote = sp && sp.isIframeTypeBlockquote
   const spIsVideoIframe = sp && sp.isVideoIframe
 
-  for (let i = 0; i < markRegKeys.length; i++) {
-    const mark = markRegKeys[i]
-    const hasMarkLabel = matchTarget.match(markReg[mark])
+  for (let i = 0; i < markRegEntries.length; i++) {
+    const mark = markRegEntries[i][0]
+    const hasMarkLabel = markRegEntries[i][1].exec(matchTarget)
     if (!hasMarkLabel) continue
 
+    let labelMark = ''
+    let labelNum = ''
     if (hasMarkLabel[1] === undefined) {
-      actualLabel.mark = hasMarkLabel[4]
-      actualLabel.num = hasMarkLabel[5]
+      labelMark = hasMarkLabel[4]
+      labelNum = hasMarkLabel[5]
     } else {
-      actualLabel.mark = hasMarkLabel[1]
-      actualLabel.num = hasMarkLabel[2]
+      labelMark = hasMarkLabel[1]
+      labelNum = hasMarkLabel[2] || hasMarkLabel[3]
     }
 
     if (captionName) {
-      if (captionName === 'pre-samp' && mark === 'img' && actualLabel.mark === '図') continue // for 図 sampキャプション
-      if (captionName !== mark && actualLabel.mark === 'リスト') continue // for リスト sampキャプション
+      if (captionName === 'pre-samp' && mark === 'img' && labelMark === '図') continue // for 図 sampキャプション
+      if (captionName !== mark && labelMark === 'リスト') continue // for リスト sampキャプション
     }
 
     if (spIsIframeTypeBlockquote) {
@@ -329,8 +331,14 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
       stripLabelPrefixMarker(nextToken, markerMatch[0])
     }
 
+    const actualLabel = {
+      content: hasMarkLabel[0],
+      mark: labelMark,
+      num: labelNum,
+      joint: '',
+    }
+
     token.attrJoin('class', opt.classPrefix + '-' + mark)
-    actualLabel.content = hasMarkLabel[0]
 
     if (opt.setFigureNumber && (mark === 'img' || mark === 'table')) {
       if (actualLabel.num === undefined) {

@@ -95,6 +95,36 @@ Figure 1.A.1 A cat.
 
 
 [Markdown]
+Figure.1
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure.1</span></p>
+
+
+[Markdown]
+Figure.1 A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure.1</span> A cat.</p>
+
+
+[Markdown]
+Figure.1.1 A cat.
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure.1.1</span> A cat.</p>
+
+
+[Markdown]
+Figure.1 a cat.
+[HTML]
+<p>Figure.1 a cat.</p>
+
+
+[Markdown]
+Figure.1 猫
+[HTML]
+<p class="caption-img"><span class="caption-img-label">Figure.1</span> 猫</p>
+
+
+[Markdown]
 Figure 1 a cat.
 [HTML]
 <p>Figure 1 a cat.</p>
