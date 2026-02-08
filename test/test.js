@@ -174,6 +174,56 @@ const runSetCaptionParagraphTests = () => {
   runCase('blockquote guard mismatch', 'Figure. A cat.\n', undefined, { isIframeTypeBlockquote: true }, null)
   runCase('video iframe allowed', 'Video. Clip.\n', { name: 'iframe' }, { isVideoIframe: true }, 'caption-video')
   runCase('video iframe mismatch', 'Figure. A cat.\n', { name: 'img' }, { isVideoIframe: true }, null)
+
+  const runDecisionCase = (name, markdown, optOverrides, expectedDecision) => {
+    const sp = {}
+    const opt = Object.assign(cloneBaseOption(), optOverrides || {})
+    const { state, paragraphIndex } = applySetCaption(markdown, undefined, sp, opt)
+    const actualClass = state.tokens[paragraphIndex].attrGet('class') || null
+    try {
+      assert.strictEqual(actualClass, 'caption-img')
+      assert.deepStrictEqual(sp.captionDecision, expectedDecision)
+    } catch (err) {
+      ok = false
+      console.log(`setCaptionParagraph decision test "${name}" failed.`)
+      console.log('Markdown:', markdown)
+      console.log('Expected decision:', expectedDecision)
+      console.log('Actual decision:', sp.captionDecision)
+      console.log('Actual class:', actualClass)
+    }
+  }
+
+  runDecisionCase(
+    'captionDecision unnumbered',
+    'Figure. A cat.\n',
+    null,
+    { mark: 'img', labelText: 'Figure', hasExplicitNumber: false },
+  )
+  runDecisionCase(
+    'captionDecision numbered',
+    'Figure 2. A cat.\n',
+    null,
+    { mark: 'img', labelText: 'Figure', hasExplicitNumber: true },
+  )
+  runDecisionCase(
+    'captionDecision preserved when label removed',
+    'Figure. A cat.\n',
+    { removeUnnumberedLabel: true },
+    { mark: 'img', labelText: 'Figure', hasExplicitNumber: false },
+  )
+
+  try {
+    const state = createStateForMarkdown('Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const fNum = { img: 0, table: 0 }
+    setCaptionParagraph(paragraphIndex, state, null, fNum, null, undefined)
+    const actualClass = state.tokens[paragraphIndex].attrGet('class') || null
+    assert.strictEqual(actualClass, 'caption-img')
+  } catch (err) {
+    ok = false
+    console.log('setCaptionParagraph test "undefined opt fallback" failed.')
+  }
+
   return ok
 }
 

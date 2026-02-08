@@ -23,6 +23,44 @@ console.log(md.render(src));
 // <p class="f-img"><span class="f-img-label">Figure 1<span class="f-img-label-joint">.</span></span> A caption.</p>
 ```
 
+## Helper APIs for Integrators
+
+For integrations such as `p7d-markdown-it-figure-with-p-caption`, the package also exports helpers:
+
+```js
+import mditPCaption, {
+  setCaptionParagraph,
+  getMarkRegForLanguages,
+  getMarkRegStateForLanguages,
+} from 'p7d-markdown-it-p-captions';
+```
+
+- `getMarkRegForLanguages(languages)` returns the regex map previously accessed as `markReg`.
+- `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`markReg`, `markRegEntries`, and candidate entry tables).
+
+If you call `setCaptionParagraph` directly (outside `md.use(mditPCaption, options)`), pass `markRegState` in your options when you use non-default languages:
+
+```js
+const opt = {
+  languages: ['en'],
+  classPrefix: 'caption',
+  markRegState: getMarkRegStateForLanguages(['en']),
+  // ...other options used by setCaptionParagraph
+};
+```
+
+When `sp` is provided to `setCaptionParagraph`, the helper writes:
+
+```js
+sp.captionDecision = {
+  mark,              // normalized mark key (e.g., 'img', 'table', 'video')
+  labelText,         // detected label word without number/joint
+  hasExplicitNumber, // true when the original label included a number
+};
+```
+
+## Caption detection rules
+
 First, the strings listed in the table below are required as the first string of a paragraph to be determined as a caption.
 
 | class attribute value | Character string at the beginning of a paragraph (uppercase or lowercase) |
@@ -39,7 +77,7 @@ First, the strings listed in the table below are required as the first string of
 [^table-note1]: 'sourcecode', 'codeblock', 'commandprompt', 'blockquote' allow spaces between words. ex. For example, 'source code' is acceptable.
 [^table-note2]: 'リスト' and '図' is also applicable only when used via [p7d-markdown-it-figure-with-p-caption](https://github.com/peaceroad/p7d-markdown-it-figure-with-p-caption).
 
-Additionally, a delimiter is required after these strings (`[.:．。：　]`) as shown below. For half-width character strings, an additional space is required. Also, in Japanese label, only half-width spaces can be used as delimiters.
+Additionally, a delimiter is required after these strings (`[.:．。：　]`) as shown below. For half-width character strings, an additional space is required. In Japanese labels, both half-width and full-width spaces can be used as delimiters.
 
 ```md
 Fig. A caption
@@ -87,89 +125,28 @@ Also, It identifies the `Figure.1` type. This format has a dot immediately after
 Figure.1 A caption.
 ```
 
-Example:
+Note: paragraphs immediately following `list_item_open` are intentionally excluded from caption detection.
 
-```js
-  [
-    'Figure',
-    '<p>Figure</p>\n'
-  ], [
-    'Figure ',
-    '<p>Figure</p>\n'
-  ], [
-    'Figure.',
-    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span></p>\n'
-  ], [
-    'Figure:',
-    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span></p>\n'
-  ], [
-    'Figure 1',
-    '<p class="caption-img"><span class="caption-img-label">Figure 1</span></p>\n'
-  ], [
-    'Figure A.1',
-    '<p class="caption-img"><span class="caption-img-label">Figure A.1</span></p>\n'
-  ], [
-    'Figure. A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
-  ], [
-    'Figure: A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
-  ], [
-    'Figure is a cat.',
-    '<p>Figure is a cat.</p>\n'
-  ], [
-    'Figure 1. A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
-  ], [
-    'Figure 1 is a cat.',
-    '<p>Figure 1 is a cat.</p>\n'
-  ], [
-    'Figure A A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure A</span> A cat.</p>\n'
-  ], [
-    'Figure 1 A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure 1</span> A cat.</p>\n'
-  ], [
-    'Figure 1 a cat.',
-    '<p>Figure 1 a cat.</p>\n'
-  ], [
-    'Figure 1: A cat.',
-    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
-  ], [
-    '図',
-    '<p>図</p>\n'
-  ], [
-    '図 ',
-    '<p>図</p>\n'
-  ], [
-    '図.',
-    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>\n'
-  ], [
-    '図1',
-    '<p class="caption-img"><span class="caption-img-label">図1</span></p>\n'
-  ], [
-    '図1.1',
-    '<p class="caption-img"><span class="caption-img-label">図1.1</span></p>\n'
-  ], [
-    '図 猫',
-    '<p class="caption-img"><span class="caption-img-label">図</span> 猫</p>\n'
-  ], [
-    '図1　猫',
-    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>猫</p>\n'
-  ], [
-    '図1.1 猫',
-    '<p class="caption-img"><span class="caption-img-label">図1.1</span> 猫</p>\n'
-  ], [
-    '図は猫',
-    '<p>図は猫</p>\n'
-  ] , [
-    '図1は猫',
-    '<p>図1は猫</p>\n'
-  ], [
-    '図1.1は猫',
-    '<p>図1.1は猫</p>\n'
-  ]
-```
+## Options
+
+### Quick reference
+
+| option | purpose |
+| ---- | ---- |
+| `languages` | Restrict caption-label detection to selected languages in `lang/*.json`. |
+| `classPrefix` | Prefix for paragraph/label/body class names (default: `caption`). |
+| `dquoteFilename` / `strongFilename` | Extract filename token right after a caption label. |
+| `bLabel` / `strongLabel` | Use `b`/`strong` tag for the label wrapper instead of `span`. |
+| `labelPrefixMarker` | Allow one/two marker strings before labels (stripped on match). |
+| `hasNumClass` | Add `label-has-num` when label includes a number. |
+| `jointSpaceUseHalfWidth` | Convert full-width joint-space labels to half-width body spacing. |
+| `removeUnnumberedLabel` | Remove label span when the label has no number. |
+| `removeUnnumberedLabelExceptMarks` | Keep unnumbered labels for specific marks. |
+| `removeMarkNameInCaptionClass` | Use `caption-label`/`caption-body` style classes without mark suffix. |
+| `wrapCaptionBody` | Wrap caption body in `<span class="...-body">...</span>`. |
+| `setFigureNumber` | Auto-number `img`/`table` captions when number is omitted. |
+| `labelClassFollowsFigure` | Reuse integrator-provided figure class base for label/body spans. |
+| `figureToLabelClassMap` | Override label/body class bases for specific figure classes. |
 
 ## Option: Specify file name
 
@@ -193,7 +170,7 @@ md.use(mditPCaption, {strongFilename: true});
 
 const src = 'Code. **Filename** A caption.\n';
 console.log(md.render(src));
-//<p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename.js</strong> Call a cat.</p>\n'
+// <p class="caption-pre-code"><span class="caption-pre-code-label">Code<span class="caption-pre-code-label-joint">.</span></span> <strong class="caption-pre-code-filename">Filename</strong> A caption.</p>\n
 ```
 
 ## Option: Set class indicating having label number
@@ -348,3 +325,87 @@ console.log(md.render(src));
 
 - Counters are maintained separately for figures and tables and reset for every Markdown render.
 - Captions that already contain a number keep that number, and the counter is updated so the next auto-generated value continues the sequence.
+
+## Detection examples (reference)
+
+```js
+  [
+    'Figure',
+    '<p>Figure</p>\n'
+  ], [
+    'Figure ',
+    '<p>Figure</p>\n'
+  ], [
+    'Figure.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span></p>\n'
+  ], [
+    'Figure:',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span></p>\n'
+  ], [
+    'Figure 1',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1</span></p>\n'
+  ], [
+    'Figure A.1',
+    '<p class="caption-img"><span class="caption-img-label">Figure A.1</span></p>\n'
+  ], [
+    'Figure. A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
+  ], [
+    'Figure: A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
+  ], [
+    'Figure is a cat.',
+    '<p>Figure is a cat.</p>\n'
+  ], [
+    'Figure 1. A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> A cat.</p>\n'
+  ], [
+    'Figure 1 is a cat.',
+    '<p>Figure 1 is a cat.</p>\n'
+  ], [
+    'Figure A A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure A</span> A cat.</p>\n'
+  ], [
+    'Figure 1 A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1</span> A cat.</p>\n'
+  ], [
+    'Figure 1 a cat.',
+    '<p>Figure 1 a cat.</p>\n'
+  ], [
+    'Figure 1: A cat.',
+    '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">:</span></span> A cat.</p>\n'
+  ], [
+    '図',
+    '<p>図</p>\n'
+  ], [
+    '図 ',
+    '<p>図</p>\n'
+  ], [
+    '図.',
+    '<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">.</span></span></p>\n'
+  ], [
+    '図1',
+    '<p class="caption-img"><span class="caption-img-label">図1</span></p>\n'
+  ], [
+    '図1.1',
+    '<p class="caption-img"><span class="caption-img-label">図1.1</span></p>\n'
+  ], [
+    '図 猫',
+    '<p class="caption-img"><span class="caption-img-label">図</span> 猫</p>\n'
+  ], [
+    '図1　猫',
+    '<p class="caption-img"><span class="caption-img-label">図1<span class="caption-img-label-joint">　</span></span>猫</p>\n'
+  ], [
+    '図1.1 猫',
+    '<p class="caption-img"><span class="caption-img-label">図1.1</span> 猫</p>\n'
+  ], [
+    '図は猫',
+    '<p>図は猫</p>\n'
+  ] , [
+    '図1は猫',
+    '<p>図1は猫</p>\n'
+  ], [
+    '図1.1は猫',
+    '<p>図1.1は猫</p>\n'
+  ]
+```
