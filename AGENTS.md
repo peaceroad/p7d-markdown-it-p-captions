@@ -15,6 +15,7 @@
 - `markRegState` caches language-set state (`markReg`, `markRegEntries`, and prebuilt candidate entry tables).
 - Language keys are normalized (valid-only, deduped, sorted) before cache lookup.
 - `setCaptionParagraph` resolves regex state from `opt.markRegState` with a safe fallback to default languages.
+- `getMarkRegStateForLanguages` returns cached objects by reference; integrators must treat returned state as immutable.
 
 ## 4. Caption Detection Hot Path
 - First gate is `isLikelyCaptionStart(content)` to skip non-candidates quickly.
@@ -28,6 +29,7 @@
 - Adds label tokens using `span` (or `b` / `strong` via options).
 - Handles joint characters as a separate `label-joint` span.
 - Optional filename extraction (`strongFilename` / `dquoteFilename`).
+- `dquoteFilename` extraction is no-op guarded when inline token shape or leading filename pattern does not match.
 - Optional body wrapper span (`wrapCaptionBody`).
 - `removeUnnumberedLabel` can drop labels unless the mark is whitelisted.
 

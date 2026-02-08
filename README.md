@@ -37,6 +37,7 @@ import mditPCaption, {
 
 - `getMarkRegForLanguages(languages)` returns the regex map previously accessed as `markReg`.
 - `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`markReg`, `markRegEntries`, and candidate entry tables).
+- The returned state is a shared cache object. Treat it as read-only; if you need to modify it, clone it first.
 
 If you call `setCaptionParagraph` directly (outside `md.use(mditPCaption, options)`), pass `markRegState` in your options when you use non-default languages:
 
