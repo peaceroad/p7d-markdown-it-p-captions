@@ -553,8 +553,12 @@ const setFigureNumber = (n, state, mark, actualLabel, fNum) => {
 }
 
 const setFilename = (state, nextToken, mark, opt) => {
-  let filename = nextToken.children[0].content.match(/^([ 　]*?)"(\S.*?)"(?:[ 　]+|$)/)
-  nextToken.children[0].content = nextToken.children[0].content.replace(/^[ 　]*?"\S.*?"([ 　]+|$)/, '$1')
+  if (!nextToken || !nextToken.children || !nextToken.children[0]) return
+  const firstChild = nextToken.children[0]
+  if (typeof firstChild.content !== 'string') return
+  const filename = firstChild.content.match(/^([ 　]*?)"(\S.*?)"([ 　]+|$)/)
+  if (!filename) return
+  firstChild.content = filename[3] + firstChild.content.slice(filename[0].length)
 
   const beforeFilenameToken = new state.Token('text', '', 0)
   beforeFilenameToken.content = filename[1]
@@ -618,9 +622,7 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
   }
 
   if (opt.dquoteFilename) {
-    if (children[0].content.match(/^[ 　]*?"\S.*?"(?:[ 　]+|$)/)) {
-      setFilename(state, nextToken, mark, opt)
-    }
+    setFilename(state, nextToken, mark, opt)
   }
 
   if (actualLabel.num) {
