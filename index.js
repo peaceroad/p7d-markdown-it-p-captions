@@ -2,13 +2,12 @@ import langSets from './lang.js'
 
 const allLangs = Object.keys(langSets)
 const allLangsKey = allLangs.slice().sort().join(',')
-let langData = { ...langSets }
 
 const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}'
 const joint = '[.:．。：　]'
 const jointFullWidth = '[．。：　]'
 const jointHalfWidth = '[.:]'
-const jointSuffixReg = new RegExp('(' + joint + ')$')
+const jointChars = new Set(['.', ':', '．', '。', '：', '　'])
 
 const markAfterWithSpace = '(?:' +
   ' *(?:' +
@@ -39,46 +38,168 @@ const markAfterWithoutSpace = '(?:' +
   ')' +
 ')'
 
+const langMarkRegCache = Object.create(null)
+
 const getLangMarkReg = (lang) => {
-  const data = langData[lang]
+  const cached = langMarkRegCache[lang]
+  if (cached) return cached
+  const data = langSets[lang]
   const langMarkReg = {}
-  Object.keys(data.markReg).forEach(mark => {
-    langMarkReg[mark] = data.markReg[mark]
+  const marks = Object.keys(data.markReg)
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i]
+    let pattern = data.markReg[mark]
     if (data.type['inter-word-space']) {
-      langMarkReg[mark] = langMarkReg[mark].replace(/([a-z])/g, (match) => '[' + match + match.toUpperCase() + ']')
-      langMarkReg[mark] += markAfterWithSpace
+      pattern = pattern.replace(/([a-z])/g, (match) => '[' + match + match.toUpperCase() + ']')
+      pattern += markAfterWithSpace
     } else {
-      langMarkReg[mark] += markAfterWithoutSpace
+      pattern += markAfterWithoutSpace
     }
-  })
+    langMarkReg[mark] = pattern
+  }
+  langMarkRegCache[lang] = langMarkReg
   return langMarkReg
 }
 
 const getMarkReg = (langs) => {
-  const markPatterns = langs.reduce((patterns, lang) => {
+  const markPatterns = {}
+  for (let i = 0; i < langs.length; i++) {
+    const lang = langs[i]
     const langMarkReg = getLangMarkReg(lang)
-    Object.keys(langMarkReg).forEach(mark => {
-      if (!patterns[mark]) {
-        patterns[mark] = []
+    const marks = Object.keys(langMarkReg)
+    for (let j = 0; j < marks.length; j++) {
+      const mark = marks[j]
+      if (!markPatterns[mark]) {
+        markPatterns[mark] = []
       }
-      patterns[mark].push(langMarkReg[mark])
-    })
-    return patterns
-  }, {})
+      markPatterns[mark].push(langMarkReg[mark])
+    }
+  }
   const markReg = {}
-  Object.keys(markPatterns).forEach(mark => {
+  const marks = Object.keys(markPatterns)
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i]
     markReg[mark] = new RegExp('^(?:' + markPatterns[mark].join('|') + ')')
-  })
+  }
   return markReg
 }
 
-let markReg = getMarkReg(allLangs)
-let markRegKeys = Object.keys(markReg)
-let markRegEntries = markRegKeys.map((key) => [key, markReg[key]])
-let markRegCache = {}
+const buildPrioritizedEntries = (markReg, markRegEntries, primaryMark, secondaryMark) => {
+  const entries = []
+  if (markReg[primaryMark]) {
+    entries.push([primaryMark, markReg[primaryMark]])
+  }
+  if (secondaryMark && secondaryMark !== primaryMark && markReg[secondaryMark]) {
+    entries.push([secondaryMark, markReg[secondaryMark]])
+  }
+  if (entries.length > 0) return entries
+  return markRegEntries
+}
 
-const refreshMarkRegEntries = () => {
-  markRegEntries = markRegKeys.map((key) => [key, markReg[key]])
+const createMarkRegState = (langs) => {
+  const resolvedMarkReg = getMarkReg(langs)
+  const resolvedMarkRegEntries = Object.keys(resolvedMarkReg).map((key) => [key, resolvedMarkReg[key]])
+  const singleMarkEntries = {}
+  for (let i = 0; i < resolvedMarkRegEntries.length; i++) {
+    const entry = resolvedMarkRegEntries[i]
+    singleMarkEntries[entry[0]] = [entry]
+  }
+  const blockquoteOnlyEntries = resolvedMarkReg.blockquote ? [[
+    'blockquote',
+    resolvedMarkReg.blockquote,
+  ]] : []
+  const videoOnlyEntries = resolvedMarkReg.video ? [[
+    'video',
+    resolvedMarkReg.video,
+  ]] : []
+  const blockquoteWithImgEntries = buildPrioritizedEntries(
+    resolvedMarkReg,
+    resolvedMarkRegEntries,
+    'blockquote',
+    'img',
+  )
+  return {
+    markReg: resolvedMarkReg,
+    markRegEntries: resolvedMarkRegEntries,
+    singleMarkEntries,
+    blockquoteOnlyEntries,
+    videoOnlyEntries,
+    blockquoteWithImgEntries,
+  }
+}
+
+const defaultMarkRegState = createMarkRegState(allLangs)
+const markRegCache = new Map()
+
+const resolveMarkRegState = (languages) => {
+  if (!Array.isArray(languages)) return defaultMarkRegState
+  const validLangs = []
+  const seen = new Set()
+  for (let i = 0; i < languages.length; i++) {
+    const lang = languages[i]
+    if (!langSets[lang] || seen.has(lang)) continue
+    seen.add(lang)
+    validLangs.push(lang)
+  }
+  if (validLangs.length === 0) return defaultMarkRegState
+  const normalizedLangs = validLangs.slice().sort()
+  const langKey = normalizedLangs.join(',')
+  if (langKey === allLangsKey) return defaultMarkRegState
+  if (markRegCache.has(langKey)) return markRegCache.get(langKey)
+  const state = createMarkRegState(normalizedLangs)
+  markRegCache.set(langKey, state)
+  return state
+}
+
+const getMarkRegStateFromOpt = (opt) => {
+  if (
+    opt &&
+    opt.markRegState &&
+    opt.markRegState.markReg &&
+    Array.isArray(opt.markRegState.markRegEntries)
+  ) {
+    return opt.markRegState
+  }
+  return defaultMarkRegState
+}
+
+const defaultSetCaptionOpt = {
+  markRegState: defaultMarkRegState,
+  classPrefix: 'caption',
+  setFigureNumber: false,
+  jointSpaceUseHalfWidth: false,
+  removeUnnumberedLabel: false,
+  removeUnnumberedLabelExceptMarksSet: null,
+  wrapCaptionBody: false,
+  labelPrefixMarkerReg: null,
+  labelPrefixMarkerNeedsCheckOnLikelyStart: false,
+  paragraphClassByMark: null,
+  captionClassByMark: null,
+  removeMarkNameInCaptionClass: false,
+  labelClassFollowsFigure: false,
+  figureToLabelClassMap: null,
+}
+
+const resolveSetCaptionOpt = (opt) => (opt ? opt : defaultSetCaptionOpt)
+
+const getMarkRegStateForLanguages = (languages) => resolveMarkRegState(languages)
+const getMarkRegForLanguages = (languages) => resolveMarkRegState(languages).markReg
+const getCandidateMarkEntries = (markRegState, captionName, spIsIframeTypeBlockquote, spIsVideoIframe) => {
+  if (!markRegState || !markRegState.markReg || !markRegState.markRegEntries) return []
+  if (spIsIframeTypeBlockquote && captionName !== 'blockquote') {
+    return markRegState.blockquoteOnlyEntries
+  }
+  if (spIsVideoIframe && captionName !== 'iframe') {
+    return markRegState.videoOnlyEntries
+  }
+  if (captionName && captionName !== 'iframe') {
+    // iframe-type blockquote captions may intentionally use image labels (e.g., Figure.).
+    if (spIsIframeTypeBlockquote && captionName === 'blockquote') {
+      return markRegState.blockquoteWithImgEntries
+    }
+    return markRegState.singleMarkEntries[captionName] || markRegState.markRegEntries
+  }
+  return markRegState.markRegEntries
 }
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -92,11 +213,41 @@ const normalizeLabelPrefixMarkers = (value) => {
   }
   return []
 }
-const buildLabelPrefixMarkerReg = (value) => {
-  const markers = normalizeLabelPrefixMarkers(value)
+const buildLabelPrefixMarkerRegFromMarkers = (markers) => {
   if (!markers.length) return null
   const pattern = markers.map(escapeRegExp).join('|')
   return new RegExp('^(?:' + pattern + ')(?:[ \\t　]+)?')
+}
+const trimAsciiSpacesStart = (text) => {
+  if (typeof text !== 'string' || !text) return text
+  let start = 0
+  while (start < text.length && text.charCodeAt(start) === 0x20) {
+    start++
+  }
+  if (start === 0) return text
+  return text.slice(start)
+}
+const trimAsciiSpacesEnd = (text) => {
+  if (typeof text !== 'string' || !text) return text
+  let end = text.length
+  while (end > 0 && text.charCodeAt(end - 1) === 0x20) {
+    end--
+  }
+  if (end === text.length) return text
+  return text.slice(0, end)
+}
+const stripTrailingJointAndSpaces = (text, jointText) => {
+  if (typeof text !== 'string' || !text || !jointText) return text
+  if (text.endsWith(jointText)) {
+    return trimAsciiSpacesEnd(text.slice(0, -jointText.length))
+  }
+  return text
+}
+const getTrailingJointChar = (text) => {
+  if (typeof text !== 'string' || !text) return ''
+  const lastChar = text.charAt(text.length - 1)
+  if (jointChars.has(lastChar)) return lastChar
+  return ''
 }
 const stripLeadingPrefix = (text, prefix) => {
   if (typeof text !== 'string' || !text || !prefix) return text
@@ -181,9 +332,32 @@ const getDefaultLabelBase = (mark, opt) => {
   return prefix + '-' + mark
 }
 
+const buildStaticClassTables = (opt) => {
+  const markReg = opt && opt.markRegState ? opt.markRegState.markReg : null
+  const marks = markReg ? Object.keys(markReg) : []
+  const paragraphClassByMark = Object.create(null)
+  const captionClassByMark = Object.create(null)
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i]
+    paragraphClassByMark[mark] = opt.classPrefix + '-' + mark
+    const base = getDefaultLabelBase(mark, opt)
+    captionClassByMark[mark] = {
+      label: base ? appendSuffixIfMissing(base, 'label') : '',
+      'label-joint': base ? appendSuffixIfMissing(base, 'label-joint') : '',
+      body: base ? appendSuffixIfMissing(base, 'body') : '',
+    }
+  }
+  opt.paragraphClassByMark = paragraphClassByMark
+  opt.captionClassByMark = captionClassByMark
+}
+
 const buildCaptionClassNames = (mark, suffix, sp, opt) => {
   const defaultBase = getDefaultLabelBase(mark, opt)
   if (!opt.labelClassFollowsFigure) {
+    const staticClasses = opt.captionClassByMark && opt.captionClassByMark[mark]
+    if (staticClasses && Object.prototype.hasOwnProperty.call(staticClasses, suffix)) {
+      return staticClasses[suffix]
+    }
     return defaultBase ? appendSuffixIfMissing(defaultBase, suffix) : ''
   }
 
@@ -240,31 +414,13 @@ const mditPCaption = (md, option) => {
   } else {
     opt.removeUnnumberedLabelExceptMarksSet = null
   }
-  opt.labelPrefixMarkerReg = buildLabelPrefixMarkerReg(opt.labelPrefixMarker)
+  const labelPrefixMarkers = normalizeLabelPrefixMarkers(opt.labelPrefixMarker)
+  opt.labelPrefixMarkerReg = buildLabelPrefixMarkerRegFromMarkers(labelPrefixMarkers)
+  opt.labelPrefixMarkerNeedsCheckOnLikelyStart = labelPrefixMarkers.some(marker => isLikelyCaptionStart(marker))
 
-  // compare sorted keys to avoid rebuild when order differs
-  const langKey = opt.languages.slice().sort().join(',')
-  if (langKey !== allLangsKey) {
-    if (markRegCache[langKey]) {
-      markReg = markRegCache[langKey].markReg
-      markRegKeys = markRegCache[langKey].markRegKeys
-    } else {
-      // build langData only for known languages to avoid runtime errors
-      langData = {}
-      const validLangs = []
-      opt.languages.forEach(lang => {
-        if (langSets[lang]) {
-          langData[lang] = langSets[lang]
-          validLangs.push(lang)
-        }
-      })
-      // pass only validated languages to regex builder
-      markReg = getMarkReg(validLangs)
-      markRegKeys = Object.keys(markReg)
-      markRegCache[langKey] = { markReg, markRegKeys }
-    }
-  }
-  refreshMarkRegEntries()
+  // Resolve regex state per plugin instance and avoid mutating shared module globals.
+  opt.markRegState = resolveMarkRegState(opt.languages)
+  buildStaticClassTables(opt)
 
   md.core.ruler.after('inline', 'p-caption', (state) => {
     const fNum = {
@@ -281,15 +437,28 @@ const mditPCaption = (md, option) => {
 }
 
 const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
+  opt = resolveSetCaptionOpt(opt)
+  if (!state || !state.tokens || typeof n !== 'number' || n < 0) return caption
   const tokens = state.tokens
+  if (n >= tokens.length) return caption
+  if (!fNum || typeof fNum !== 'object') {
+    fNum = { img: 0, table: 0 }
+  }
   const token = tokens[n]
+  if (!token) return caption
   if (token.type !== 'paragraph_open') return caption
   if (n > 1 && tokens[n-1].type === 'list_item_open') return caption
   const nextToken = tokens[n+1]
   if (!nextToken || nextToken.type !== 'inline') return caption
+  if (!nextToken.children || nextToken.children.length === 0 || !nextToken.children[0]) return caption
   const content = typeof nextToken.content === 'string' ? nextToken.content : ''
-  const markerMatch = opt.labelPrefixMarkerReg ? content.match(opt.labelPrefixMarkerReg) : null
-  if (!isLikelyCaptionStart(content) && !markerMatch) return caption
+  const contentLikelyCaption = isLikelyCaptionStart(content)
+  const shouldCheckMarkerOnLikelyStart = opt.labelPrefixMarkerNeedsCheckOnLikelyStart !== false
+  let markerMatch = null
+  if (opt.labelPrefixMarkerReg && (!contentLikelyCaption || shouldCheckMarkerOnLikelyStart)) {
+    markerMatch = opt.labelPrefixMarkerReg.exec(content)
+  }
+  if (!contentLikelyCaption && !markerMatch) return caption
   const matchTarget = markerMatch ? content.slice(markerMatch[0].length) : content
   if (!matchTarget) return caption
   if (markerMatch && !isLikelyCaptionStart(matchTarget)) return caption
@@ -299,6 +468,8 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   const spIsIframeTypeBlockquote = sp && sp.isIframeTypeBlockquote
   const spIsVideoIframe = sp && sp.isVideoIframe
 
+  const markRegState = getMarkRegStateFromOpt(opt)
+  const markRegEntries = getCandidateMarkEntries(markRegState, captionName, spIsIframeTypeBlockquote, spIsVideoIframe)
   for (let i = 0; i < markRegEntries.length; i++) {
     const mark = markRegEntries[i][0]
     const hasMarkLabel = markRegEntries[i][1].exec(matchTarget)
@@ -315,7 +486,6 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
     }
 
     if (captionName) {
-      if (captionName === 'pre-samp' && mark === 'img' && labelMark === '図') continue // for 図 sampキャプション
       if (captionName !== mark && labelMark === 'リスト') continue // for リスト sampキャプション
     }
 
@@ -338,7 +508,8 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
       joint: '',
     }
 
-    token.attrJoin('class', opt.classPrefix + '-' + mark)
+    const paragraphClass = opt.paragraphClassByMark && opt.paragraphClassByMark[mark]
+    token.attrJoin('class', paragraphClass || (opt.classPrefix + '-' + mark))
 
     if (opt.setFigureNumber && (mark === 'img' || mark === 'table')) {
       if (actualLabel.num === undefined) {
@@ -348,11 +519,8 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
       }
     }
 
-    actualLabel.joint = actualLabel.content.match(jointSuffixReg)
-    if(actualLabel.joint) {
-      actualLabel.joint = actualLabel.joint[1]
-    }
-    actualLabel.content = actualLabel.content.replace(/ *$/, '')
+    actualLabel.joint = getTrailingJointChar(actualLabel.content)
+    actualLabel.content = trimAsciiSpacesEnd(actualLabel.content)
     let convertJointSpaceFullWith = false
     if (opt.jointSpaceUseHalfWidth && actualLabel.joint === '　') {
       actualLabel.joint = ''
@@ -422,13 +590,23 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
     labelToken.open.attrJoin('class', 'label-has-num')
   }
 
-  children[0].content = children[0].content.replace(actualLabel.content, '')
+  const firstContent = children[0].content
+  if (firstContent.startsWith(actualLabel.content)) {
+    children[0].content = firstContent.slice(actualLabel.content.length)
+  } else {
+    children[0].content = firstContent.replace(actualLabel.content, '')
+  }
   if (convertJointSpaceFullWith) {
-    actualLabel.content = actualLabel.content.replace(/　$/, '')
-    children[0].content = ' ' + children[0].content.replace(/^　/, '')
+    if (actualLabel.content.endsWith('　')) {
+      actualLabel.content = actualLabel.content.slice(0, -1)
+    }
+    if (children[0].content.startsWith('　')) {
+      children[0].content = ' ' + children[0].content.slice(1)
+    } else {
+      children[0].content = ' ' + children[0].content
+    }
   }
   labelToken.content.content = actualLabel.content
-
   if (opt.strongFilename) {
     if (children.length > 4) {
       if(children[1].type === 'strong_open'
@@ -454,10 +632,10 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
         if (exceptMarks.has(mark)) {
           labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
         } else {
-          children[0].content = children[0].content.replace(/^ */, '')
+          children[0].content = trimAsciiSpacesStart(children[0].content)
         }
       } else {
-        children[0].content = children[0].content.replace(/^ */, '')
+        children[0].content = trimAsciiSpacesStart(children[0].content)
       }
     } else {
       labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
@@ -481,21 +659,7 @@ const addJointToken = (state, nextToken, mark, labelToken, actualLabelJoint, opt
   nextToken.children.splice(0, 0, labelToken.first, labelToken.open, labelToken.content, labelToken.close)
   let bodyStartIndex = 4
   if (actualLabelJoint) {
-    // Escape joint character for safe use in RegExp (e.g., '.' or ':' should be literal)
-    // Prefer simple string trimming when joint is a single character to avoid RegExp allocations
-    if (actualLabelJoint.length === 1) {
-      // remove actualLabelJoint and trailing spaces at end
-      if (nextToken.children[2].content.endsWith(actualLabelJoint)) {
-        nextToken.children[2].content = nextToken.children[2].content.slice(0, -1).replace(/ *$/, '')
-      } else {
-        // if actualLabelJoint not exactly at end (rare), fallback to RegExp using escaped pattern
-        const jointPattern = actualLabelJoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(jointPattern + ' *$'), '')
-      }
-    } else {
-      const jointPattern = actualLabelJoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(jointPattern + ' *$'), '')
-    }
+    nextToken.children[2].content = stripTrailingJointAndSpaces(nextToken.children[2].content, actualLabelJoint)
 
     const labelJointToken = {
       open: new state.Token('span_open', 'span', 1),
@@ -568,4 +732,12 @@ const wrapCaptionBody = (state, nextToken, mark, labelMeta, opt, sp) => {
 }
 
 export default mditPCaption
-export { setCaptionParagraph, markAfterNum, joint, jointFullWidth, jointHalfWidth, markReg }
+export {
+  setCaptionParagraph,
+  markAfterNum,
+  joint,
+  jointFullWidth,
+  jointHalfWidth,
+  getMarkRegStateForLanguages,
+  getMarkRegForLanguages,
+}
