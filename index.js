@@ -145,7 +145,8 @@ const resolveMarkRegState = (languages) => {
   const normalizedLangs = validLangs.slice().sort()
   const langKey = normalizedLangs.join(',')
   if (langKey === allLangsKey) return defaultMarkRegState
-  if (markRegCache.has(langKey)) return markRegCache.get(langKey)
+  const cachedState = markRegCache.get(langKey)
+  if (cachedState) return cachedState
   const state = createMarkRegState(normalizedLangs)
   markRegCache.set(langKey, state)
   return state
@@ -352,37 +353,34 @@ const buildStaticClassTables = (opt) => {
 }
 
 const buildCaptionClassNames = (mark, suffix, sp, opt) => {
-  const defaultBase = getDefaultLabelBase(mark, opt)
   if (!opt.labelClassFollowsFigure) {
     const staticClasses = opt.captionClassByMark && opt.captionClassByMark[mark]
     if (staticClasses && Object.prototype.hasOwnProperty.call(staticClasses, suffix)) {
       return staticClasses[suffix]
     }
+    const defaultBase = getDefaultLabelBase(mark, opt)
     return defaultBase ? appendSuffixIfMissing(defaultBase, suffix) : ''
   }
 
   const classNames = []
+  const seen = new Set()
+  const pushClassName = (base) => {
+    const resolved = appendSuffixIfMissing(base, suffix)
+    if (!resolved || seen.has(resolved)) return
+    seen.add(resolved)
+    classNames.push(resolved)
+  }
   const figureBases = resolveFigureLabelBases(sp, opt)
   for (const base of figureBases) {
-    const resolved = appendSuffixIfMissing(base, suffix)
-    if (resolved) classNames.push(resolved)
+    pushClassName(base)
   }
+  const defaultBase = getDefaultLabelBase(mark, opt)
   if (defaultBase) {
-    const resolvedDefault = appendSuffixIfMissing(defaultBase, suffix)
-    if (resolvedDefault) classNames.push(resolvedDefault)
+    pushClassName(defaultBase)
   }
   if (classNames.length === 0) return ''
   if (classNames.length === 1) return classNames[0]
-
-  const deduped = []
-  const seen = new Set()
-  for (const entry of classNames) {
-    if (!seen.has(entry)) {
-      seen.add(entry)
-      deduped.push(entry)
-    }
-  }
-  return deduped.join(' ')
+  return classNames.join(' ')
 }
 
 const mditPCaption = (md, option) => {
@@ -540,9 +538,8 @@ const replaceLeadingText = (text, mark, replacement) => {
 
 const setFigureNumber = (n, state, mark, actualLabel, fNum) => {
   const nextToken = state.tokens[n+1]
-  fNum[mark]++
-  let vNum = fNum[mark]
-  let replacedCont = actualLabel.mark + (/^[a-zA-Z]/.test(actualLabel.mark) ? ' ' : '') + vNum
+  const vNum = ++fNum[mark]
+  const replacedCont = actualLabel.mark + (/^[a-zA-Z]/.test(actualLabel.mark) ? ' ' : '') + vNum
   actualLabel.num = vNum
   nextToken.content = replaceLeadingText(nextToken.content, actualLabel.mark, replacedCont)
   if (nextToken.children && nextToken.children[0]) {
@@ -570,6 +567,12 @@ const setFilename = (state, nextToken, mark, opt) => {
 
   nextToken.children.splice(0, 0, beforeFilenameToken, filenameTokenOpen, filenameTokenContent, filenameTokenClose)
   return
+}
+
+const shouldRenderUnnumberedLabel = (mark, opt) => {
+  if (!opt.removeUnnumberedLabel) return true
+  const exceptMarks = opt.removeUnnumberedLabelExceptMarksSet
+  return !!(exceptMarks && exceptMarks.has(mark))
 }
 
 const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFullWith, opt, sp) => {
@@ -625,23 +628,10 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
     setFilename(state, nextToken, mark, opt)
   }
 
-  if (actualLabel.num) {
+  if (actualLabel.num || shouldRenderUnnumberedLabel(mark, opt)) {
     labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
   } else {
-    if (opt.removeUnnumberedLabel) {
-      const exceptMarks = opt.removeUnnumberedLabelExceptMarksSet
-      if (exceptMarks && exceptMarks.size > 0) {
-        if (exceptMarks.has(mark)) {
-          labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
-        } else {
-          children[0].content = trimAsciiSpacesStart(children[0].content)
-        }
-      } else {
-        children[0].content = trimAsciiSpacesStart(children[0].content)
-      }
-    } else {
-      labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
-    }
+    children[0].content = trimAsciiSpacesStart(children[0].content)
   }
   if (opt.wrapCaptionBody) {
     wrapCaptionBody(state, nextToken, mark, labelMeta, opt, sp)
