@@ -29,14 +29,22 @@ For integrations such as `p7d-markdown-it-figure-with-p-caption`, the package al
 
 ```js
 import mditPCaption, {
+  buildLabelClassLookup,
+  buildLabelPrefixMarkerRegFromMarkers,
+  normalizeLabelPrefixMarkers,
+  getFallbackLabelForText,
   setCaptionParagraph,
   getMarkRegForLanguages,
   getMarkRegStateForLanguages,
+  stripLabelPrefixMarker,
 } from 'p7d-markdown-it-p-captions';
 ```
 
 - `getMarkRegForLanguages(languages)` returns the regex map previously accessed as `markReg`.
-- `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`markReg`, `markRegEntries`, and candidate entry tables).
+- `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`languages`, `markReg`, `markRegEntries`, candidate entry tables, and `fallbackLabelsByLang`).
+- `getFallbackLabelForText(mark, text, markRegState)` resolves a language-aware fallback label such as `Figure` / `図` or `Table` / `表`.
+- `normalizeLabelPrefixMarkers(value)`, `buildLabelPrefixMarkerRegFromMarkers(markers)`, and `stripLabelPrefixMarker(inlineToken, markerText)` expose the same label-prefix handling used internally by `setCaptionParagraph`.
+- `buildLabelClassLookup(options)` returns the label-class candidates used by integrators that need to patch generated caption label text after `setCaptionParagraph`.
 - The returned state is a shared cache object. Treat it as read-only; if you need to modify it, clone it first.
 
 If you call `setCaptionParagraph` directly (outside `md.use(mditPCaption, options)`), pass `markRegState` in your options when you use non-default languages:
@@ -58,6 +66,17 @@ sp.captionDecision = {
   labelText,         // detected label word without number/joint
   hasExplicitNumber, // true when the original label included a number
 };
+```
+
+Language files under `lang/*.json` may also define `fallbackLabels`. These are used by `getFallbackLabelForText` and exposed on `markRegState.fallbackLabelsByLang` for integrators that auto-generate captions from `alt` / `title` text.
+
+```json
+{
+  "fallbackLabels": {
+    "img": "Figure",
+    "table": "Table"
+  }
+}
 ```
 
 ## Caption detection rules

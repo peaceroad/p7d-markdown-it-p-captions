@@ -5,7 +5,15 @@ import mdit from 'markdown-it'
 import Token from 'markdown-it/lib/token.mjs'
 import { fileURLToPath } from 'url'
 
-import mditPCaption, { setCaptionParagraph } from '../index.js'
+import mditPCaption, {
+  buildLabelClassLookup,
+  buildLabelPrefixMarkerRegFromMarkers,
+  getFallbackLabelForText,
+  getMarkRegStateForLanguages,
+  normalizeLabelPrefixMarkers,
+  setCaptionParagraph,
+  stripLabelPrefixMarker,
+} from '../index.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -228,5 +236,69 @@ const runSetCaptionParagraphTests = () => {
 }
 
 pass = runSetCaptionParagraphTests() && pass
+
+const runHelperExportTests = () => {
+  let ok = true
+
+  try {
+    const stateA = getMarkRegStateForLanguages(['ja', 'en'])
+    const stateB = getMarkRegStateForLanguages(['en', 'ja'])
+    assert.strictEqual(stateA, stateB)
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA), 'Figure')
+    assert.strictEqual(getFallbackLabelForText('img', '猫です。', stateA), '図')
+    assert.strictEqual(getFallbackLabelForText('table', '表です。', stateA), '表')
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', getMarkRegStateForLanguages(['ja'])), '図')
+    assert.strictEqual(getFallbackLabelForText('img', '猫です。', getMarkRegStateForLanguages(['en'])), 'Figure')
+  } catch (err) {
+    ok = false
+    console.log('helper export test "fallback labels" failed.')
+    console.log(err)
+  }
+
+  try {
+    const markers = normalizeLabelPrefixMarkers(['▼', '▲', '◇'])
+    assert.deepStrictEqual(markers, ['▼', '▲'])
+    const markerReg = buildLabelPrefixMarkerRegFromMarkers(markers)
+    assert.ok(markerReg)
+    assert.ok(markerReg.test('▼ Figure. A cat.'))
+    assert.ok(markerReg.test('▲Figure. A cat.'))
+
+    const inlineToken = createStateForMarkdown('▼Figure. A cat.\n').tokens.find(token => token.type === 'inline')
+    stripLabelPrefixMarker(inlineToken, '▼')
+    assert.strictEqual(inlineToken.content, 'Figure. A cat.')
+    assert.strictEqual(inlineToken.children[0].content, 'Figure. A cat.')
+  } catch (err) {
+    ok = false
+    console.log('helper export test "label prefix marker helpers" failed.')
+    console.log(err)
+  }
+
+  try {
+    assert.deepStrictEqual(
+      buildLabelClassLookup({ classPrefix: 'caption', removeMarkNameInCaptionClass: false }),
+      {
+        img: ['caption-img-label', 'caption-label'],
+        table: ['caption-table-label', 'caption-label'],
+        default: ['caption-label'],
+      },
+    )
+    assert.deepStrictEqual(
+      buildLabelClassLookup({ classPrefix: 'caption', removeMarkNameInCaptionClass: true }),
+      {
+        img: ['caption-label'],
+        table: ['caption-label'],
+        default: ['caption-label'],
+      },
+    )
+  } catch (err) {
+    ok = false
+    console.log('helper export test "buildLabelClassLookup" failed.')
+    console.log(err)
+  }
+
+  return ok
+}
+
+pass = runHelperExportTests() && pass
 
 if (pass) console.log('Passed all test.')

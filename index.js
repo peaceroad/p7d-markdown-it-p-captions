@@ -118,13 +118,22 @@ const createMarkRegState = (langs) => {
     'blockquote',
     'img',
   )
+  const fallbackLabelsByLang = Object.create(null)
+  for (let i = 0; i < langs.length; i++) {
+    const lang = langs[i]
+    const data = langSets[lang]
+    if (!data || !data.fallbackLabels) continue
+    fallbackLabelsByLang[lang] = data.fallbackLabels
+  }
   return {
+    languages: langs.slice(),
     markReg: resolvedMarkReg,
     markRegEntries: resolvedMarkRegEntries,
     singleMarkEntries,
     blockquoteOnlyEntries,
     videoOnlyEntries,
     blockquoteWithImgEntries,
+    fallbackLabelsByLang,
   }
 }
 
@@ -185,6 +194,59 @@ const resolveSetCaptionOpt = (opt) => (opt ? opt : defaultSetCaptionOpt)
 
 const getMarkRegStateForLanguages = (languages) => resolveMarkRegState(languages)
 const getMarkRegForLanguages = (languages) => resolveMarkRegState(languages).markReg
+const isJapaneseCharCode = (code) => {
+  return (
+    (code >= 0x3040 && code <= 0x30ff) ||
+    (code >= 0x31f0 && code <= 0x31ff) ||
+    (code >= 0x4e00 && code <= 0x9fff) ||
+    (code >= 0xff66 && code <= 0xff9f)
+  )
+}
+const isSentenceBoundaryChar = (char) => {
+  return char === '.' || char === '!' || char === '?' || char === '。' || char === '！' || char === '？'
+}
+const detectFallbackLanguageForText = (text, markRegState, mark) => {
+  const state = markRegState && markRegState.fallbackLabelsByLang ? markRegState : defaultMarkRegState
+  const labelsByLang = state.fallbackLabelsByLang || {}
+  const languages = Array.isArray(state.languages) ? state.languages : []
+  const primaryLanguage = languages[0] || 'en'
+  const target = (text || '').trim()
+  if (!target) {
+    if (labelsByLang[primaryLanguage] && labelsByLang[primaryLanguage][mark]) return primaryLanguage
+    if (labelsByLang.en && labelsByLang.en[mark]) return 'en'
+    for (let i = 0; i < languages.length; i++) {
+      const lang = languages[i]
+      if (labelsByLang[lang] && labelsByLang[lang][mark]) return lang
+    }
+    return primaryLanguage
+  }
+  for (let i = 0; i < target.length; i++) {
+    const char = target[i]
+    const code = target.charCodeAt(i)
+    if (isJapaneseCharCode(code)) {
+      if (labelsByLang.ja && labelsByLang.ja[mark]) return 'ja'
+      break
+    }
+    if (isSentenceBoundaryChar(char) || char === '\n') break
+  }
+  if (labelsByLang.en && labelsByLang.en[mark]) return 'en'
+  if (labelsByLang[primaryLanguage] && labelsByLang[primaryLanguage][mark]) return primaryLanguage
+  for (let i = 0; i < languages.length; i++) {
+    const lang = languages[i]
+    if (labelsByLang[lang] && labelsByLang[lang][mark]) return lang
+  }
+  return ''
+}
+const getFallbackLabelForText = (mark, text, markRegState) => {
+  if (!mark) return ''
+  const state = markRegState && markRegState.fallbackLabelsByLang ? markRegState : defaultMarkRegState
+  const lang = detectFallbackLanguageForText(text, state, mark)
+  if (!lang) return ''
+  const labelsByLang = state.fallbackLabelsByLang || {}
+  const labels = labelsByLang[lang]
+  if (!labels) return ''
+  return labels[mark] || ''
+}
 const getCandidateMarkEntries = (markRegState, captionName, spIsIframeTypeBlockquote, spIsVideoIframe) => {
   if (!markRegState || !markRegState.markReg || !markRegState.markRegEntries) return []
   if (spIsIframeTypeBlockquote && captionName !== 'blockquote') {
@@ -268,6 +330,20 @@ const stripLabelPrefixMarker = (inlineToken, markerText) => {
         break
       }
     }
+  }
+}
+
+const buildLabelClassLookup = (opt) => {
+  const prefix = opt && opt.classPrefix ? opt.classPrefix + '-' : ''
+  const defaultClasses = [prefix + 'label']
+  const withType = (type) => {
+    if (opt && opt.removeMarkNameInCaptionClass) return defaultClasses
+    return [prefix + type + '-label', ...defaultClasses]
+  }
+  return {
+    img: withType('img'),
+    table: withType('table'),
+    default: defaultClasses,
   }
 }
 
@@ -553,6 +629,7 @@ const setFilename = (state, nextToken, mark, opt) => {
   if (!nextToken || !nextToken.children || !nextToken.children[0]) return
   const firstChild = nextToken.children[0]
   if (typeof firstChild.content !== 'string') return
+  if (firstChild.content.indexOf('"') === -1) return
   const filename = firstChild.content.match(/^([ 　]*?)"(\S.*?)"([ 　]+|$)/)
   if (!filename) return
   firstChild.content = filename[3] + firstChild.content.slice(filename[0].length)
@@ -725,11 +802,16 @@ const wrapCaptionBody = (state, nextToken, mark, labelMeta, opt, sp) => {
 
 export default mditPCaption
 export {
+  buildLabelClassLookup,
+  buildLabelPrefixMarkerRegFromMarkers,
+  normalizeLabelPrefixMarkers,
   setCaptionParagraph,
   markAfterNum,
   joint,
   jointFullWidth,
   jointHalfWidth,
+  getFallbackLabelForText,
   getMarkRegStateForLanguages,
   getMarkRegForLanguages,
+  stripLabelPrefixMarker,
 }

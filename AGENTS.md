@@ -12,10 +12,11 @@
 
 ## 3. Label Regex State
 - `langMarkRegCache` caches per-language mark patterns after adding language-specific suffix rules.
-- `markRegState` caches language-set state (`markReg`, `markRegEntries`, and prebuilt candidate entry tables).
+- `markRegState` caches language-set state (`languages`, `markReg`, `markRegEntries`, prebuilt candidate entry tables, and `fallbackLabelsByLang`).
 - Language keys are normalized (valid-only, deduped, sorted) before cache lookup.
 - `setCaptionParagraph` resolves regex state from `opt.markRegState` with a safe fallback to default languages.
 - `getMarkRegStateForLanguages` returns cached objects by reference; integrators must treat returned state as immutable.
+- Fallback-label resolution (`getFallbackLabelForText`) reads `fallbackLabelsByLang` from the cached state; do not add a second locale cache on top.
 
 ## 4. Caption Detection Hot Path
 - First gate is `isLikelyCaptionStart(content)` to skip non-candidates quickly.
@@ -29,7 +30,7 @@
 - Adds label tokens using `span` (or `b` / `strong` via options).
 - Handles joint characters as a separate `label-joint` span.
 - Optional filename extraction (`strongFilename` / `dquoteFilename`).
-- `dquoteFilename` extraction is no-op guarded when inline token shape or leading filename pattern does not match.
+- `dquoteFilename` extraction is no-op guarded when inline token shape lacks `"` or the leading filename pattern does not match.
 - Optional body wrapper span (`wrapCaptionBody`).
 - `removeUnnumberedLabel` can drop labels unless the mark is whitelisted.
 
@@ -66,10 +67,15 @@
 ## 11. Exported Integration APIs
 - Default export: plugin factory (`mditPCaption`).
 - Named exports:
+  - `buildLabelClassLookup`
+  - `buildLabelPrefixMarkerRegFromMarkers`
+  - `normalizeLabelPrefixMarkers`
+  - `getFallbackLabelForText`
   - `setCaptionParagraph`
   - `markAfterNum`, `joint`, `jointFullWidth`, `jointHalfWidth`
   - `getMarkRegForLanguages`
   - `getMarkRegStateForLanguages`
+  - `stripLabelPrefixMarker`
 - `markReg` direct export is removed; integrators should build it via `getMarkRegForLanguages(languages)`.
 
 ## 12. Test Coverage

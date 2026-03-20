@@ -11,5 +11,9 @@
     "blockquote": "((?:block ?)?quote|source|cit(?:ed|ation))",
     "slide": "(slide)",
     "audio": "(audio|sound)"
+  },
+  "fallbackLabels": {
+    "img": "Figure",
+    "table": "Table"
   }
 }
