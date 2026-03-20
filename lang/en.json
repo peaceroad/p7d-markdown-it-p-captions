@@ -1,6 +1,6 @@
 {
   "type": {
-    "inter-word-space": true
+    "label-layout": "spaced"
   },
   "markReg": {
     "img": "(fig(?:ure)?|illust|photo)",
@@ -12,8 +12,16 @@
     "slide": "(slide)",
     "audio": "(audio|sound)"
   },
-  "fallbackLabels": {
-    "img": "Figure",
-    "table": "Table"
+  "generatedLabelDefaults": {
+    "img": {
+      "label": "Figure",
+      "joint": ".",
+      "space": " "
+    },
+    "table": {
+      "label": "Table",
+      "joint": ".",
+      "space": " "
+    }
   }
 }

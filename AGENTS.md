@@ -11,17 +11,21 @@
 - Skips paragraphs that are immediately after `list_item_open` to avoid list-item edge cases.
 
 ## 3. Label Regex State
-- `langMarkRegCache` caches per-language mark patterns after adding language-specific suffix rules.
-- `markRegState` caches language-set state (`languages`, `markReg`, `markRegEntries`, prebuilt candidate entry tables, and `fallbackLabelsByLang`).
+- `langMarkSpecCache` caches per-language mark matcher specs after applying required `type['label-layout']` suffix rules and per-mark `match-case` handling.
+- `langGeneratedLabelDefaultsCache` caches normalized `generatedLabelDefaults` per language.
+- `markRegState` caches language-set state (`languages`, `markReg`, `markRegEntries`, prebuilt candidate entry tables, and `generatedLabelDefaultsByLang`).
 - Language keys are normalized (valid-only, deduped, sorted) before cache lookup.
+- When `languages` is explicitly provided but no valid language remains, state resolution returns an empty state rather than falling back to the default `en/ja` set.
 - `setCaptionParagraph` resolves regex state from `opt.markRegState` with a safe fallback to default languages.
 - `getMarkRegStateForLanguages` returns cached objects by reference; integrators must treat returned state as immutable.
-- Fallback-label resolution (`getFallbackLabelForText`) reads `fallbackLabelsByLang` from the cached state; do not add a second locale cache on top.
+- Generated-label resolution (`getGeneratedLabelDefaults` / `getFallbackLabelForText`) reads `generatedLabelDefaultsByLang` from the cached state and accepts optional `preferredLanguages` only as a tie-break for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the state language order rather than disabling fallback generation. Do not add a second locale cache on top.
 
 ## 4. Caption Detection Hot Path
 - First gate is `isLikelyCaptionStart(content)` to skip non-candidates quickly.
 - Optional marker regex (`labelPrefixMarker`) runs only when needed; marker stripping happens only after a label match.
 - Candidate mark entries are narrowed up-front by `caption.name`, `sp.isIframeTypeBlockquote`, and `sp.isVideoIframe`.
+- `analyzeCaptionStart` is the pure read-only helper for this detection path; `setCaptionParagraph` now delegates its leading-label parse to that helper instead of duplicating regex decode logic.
+- `type['label-layout']` controls only the shared suffix syntax (`spaced` vs `compact`); label-word matching is controlled per mark through string shorthand or `{ pattern, 'match-case' }`.
 - Special integration case preserved:
   - `blockquote` caption can accept `img` labels in iframe-type flows.
 - `setCaptionParagraph` includes defensive defaults and input guards for direct helper usage (missing `opt`, bad index/state, missing inline children).
@@ -52,7 +56,7 @@
 - Explicit numbers in the caption update the counter and are preserved.
 
 ## 9. String/Joint Optimizations
-- Joint detection uses a constant char set (`jointChars`) instead of end-of-label regex.
+- Joint detection uses direct trailing-char checks instead of end-of-label regex.
 - Leading/trailing ASCII space trimming uses dedicated helpers.
 - Prefix removal prefers `startsWith + slice` before fallback replacement.
 - Joint removal uses targeted string trimming (`stripTrailingJointAndSpaces`) to avoid regex churn.
@@ -67,8 +71,10 @@
 ## 11. Exported Integration APIs
 - Default export: plugin factory (`mditPCaption`).
 - Named exports:
+  - `analyzeCaptionStart`
   - `buildLabelClassLookup`
   - `buildLabelPrefixMarkerRegFromMarkers`
+  - `getGeneratedLabelDefaults`
   - `normalizeLabelPrefixMarkers`
   - `getFallbackLabelForText`
   - `setCaptionParagraph`
@@ -76,8 +82,10 @@
   - `getMarkRegForLanguages`
   - `getMarkRegStateForLanguages`
   - `stripLabelPrefixMarker`
-- `markReg` direct export is removed; integrators should build it via `getMarkRegForLanguages(languages)`.
+- `markReg` direct export is removed; integrators should build matcher maps via `getMarkRegForLanguages(languages)`.
 
 ## 12. Test Coverage
 - Fixtures under `test/` drive expected HTML output.
-- Helper-level tests verify `setCaptionParagraph` direct-call behavior, including `sp.captionDecision` compatibility and missing-`opt` fallback safety.
+- Helper-level tests verify:
+  - `setCaptionParagraph` direct-call behavior, including `sp.captionDecision` compatibility and missing-`opt` fallback safety.
+  - pure helper exports such as `analyzeCaptionStart`, `getGeneratedLabelDefaults`, `getFallbackLabelForText`, marker-prefix helpers, class lookup generation, `preferredLanguages` tie-break behavior, and empty-state behavior for unsupported language lists.

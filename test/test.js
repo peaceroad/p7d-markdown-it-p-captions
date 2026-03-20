@@ -6,9 +6,12 @@ import Token from 'markdown-it/lib/token.mjs'
 import { fileURLToPath } from 'url'
 
 import mditPCaption, {
+  analyzeCaptionStart,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
+  getGeneratedLabelDefaults,
   getFallbackLabelForText,
+  getMarkRegForLanguages,
   getMarkRegStateForLanguages,
   normalizeLabelPrefixMarkers,
   setCaptionParagraph,
@@ -243,15 +246,53 @@ const runHelperExportTests = () => {
   try {
     const stateA = getMarkRegStateForLanguages(['ja', 'en'])
     const stateB = getMarkRegStateForLanguages(['en', 'ja'])
+    const enMarkReg = getMarkRegForLanguages(['en'])
     assert.strictEqual(stateA, stateB)
+    assert.ok(enMarkReg.img.test('Figure. A cat.'))
+    assert.ok(enMarkReg.img.test('figure. A cat.'))
+    assert.strictEqual(stateA.generatedLabelDefaultsByLang.en.img.label, 'Figure')
+    assert.strictEqual(stateA.generatedLabelDefaultsByLang.ja.img.label, '図')
+    assert.deepStrictEqual(getGeneratedLabelDefaults('img', 'A cat.', stateA), {
+      label: 'Figure',
+      joint: '.',
+      space: ' ',
+    })
+    assert.deepStrictEqual(getGeneratedLabelDefaults('img', '猫です。', stateA), {
+      label: '図',
+      joint: '　',
+      space: '',
+    })
+    assert.deepStrictEqual(getGeneratedLabelDefaults('img', 'A cat.', stateA, ['ja', 'en']), {
+      label: '図',
+      joint: '　',
+      space: '',
+    })
+    assert.deepStrictEqual(getGeneratedLabelDefaults('img', 'A cat.', stateA, ['de']), {
+      label: 'Figure',
+      joint: '.',
+      space: ' ',
+    })
+    assert.deepStrictEqual(getGeneratedLabelDefaults('img', '猫です。', stateA, ['en', 'ja']), {
+      label: '図',
+      joint: '　',
+      space: '',
+    })
     assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA), 'Figure')
     assert.strictEqual(getFallbackLabelForText('img', '猫です。', stateA), '図')
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA, ['ja', 'en']), '図')
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA, ['de']), 'Figure')
+    assert.strictEqual(getFallbackLabelForText('img', '猫です。', stateA, ['en', 'ja']), '図')
     assert.strictEqual(getFallbackLabelForText('table', '表です。', stateA), '表')
     assert.strictEqual(getFallbackLabelForText('img', 'A cat.', getMarkRegStateForLanguages(['ja'])), '図')
     assert.strictEqual(getFallbackLabelForText('img', '猫です。', getMarkRegStateForLanguages(['en'])), 'Figure')
+
+    const unsupportedState = getMarkRegStateForLanguages(['fr', 'de'])
+    assert.deepStrictEqual(unsupportedState.languages, [])
+    assert.strictEqual(Object.keys(unsupportedState.markReg).length, 0)
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', unsupportedState), '')
   } catch (err) {
     ok = false
-    console.log('helper export test "fallback labels" failed.')
+    console.log('helper export test "generated label defaults" failed.')
     console.log(err)
   }
 
@@ -293,6 +334,75 @@ const runHelperExportTests = () => {
   } catch (err) {
     ok = false
     console.log('helper export test "buildLabelClassLookup" failed.')
+    console.log(err)
+  }
+
+  try {
+    const state = getMarkRegStateForLanguages(['en', 'ja'])
+    assert.deepStrictEqual(
+      analyzeCaptionStart('Figure 1. A cat.', { markRegState: state, preferredMark: 'img' }),
+      {
+        mark: 'img',
+        kind: 'caption',
+        matchedText: 'Figure 1.',
+        labelText: 'Figure',
+        number: '1',
+        joint: '.',
+        bodyText: 'A cat.',
+        hasExplicitNumber: true,
+        prefixMarker: '',
+      },
+    )
+    assert.deepStrictEqual(
+      analyzeCaptionStart('図1　キャプション', { markRegState: state, preferredMark: 'img' }),
+      {
+        mark: 'img',
+        kind: 'caption',
+        matchedText: '図1　',
+        labelText: '図',
+        number: '1',
+        joint: '　',
+        bodyText: 'キャプション',
+        hasExplicitNumber: true,
+        prefixMarker: '',
+      },
+    )
+    assert.deepStrictEqual(
+      analyzeCaptionStart('Figure 1', { markRegState: state, preferredMark: 'img' }),
+      {
+        mark: 'img',
+        kind: 'label-only',
+        matchedText: 'Figure 1',
+        labelText: 'Figure',
+        number: '1',
+        joint: '',
+        bodyText: '',
+        hasExplicitNumber: true,
+        prefixMarker: '',
+      },
+    )
+    assert.deepStrictEqual(
+      analyzeCaptionStart('▼ Figure. Marker', {
+        markRegState: state,
+        preferredMark: 'img',
+        labelPrefixMarker: '▼',
+      }),
+      {
+        mark: 'img',
+        kind: 'caption',
+        matchedText: 'Figure.',
+        labelText: 'Figure',
+        number: '',
+        joint: '.',
+        bodyText: 'Marker',
+        hasExplicitNumber: false,
+        prefixMarker: '▼ ',
+      },
+    )
+    assert.strictEqual(analyzeCaptionStart('Plain text', { markRegState: state, preferredMark: 'img' }), null)
+  } catch (err) {
+    ok = false
+    console.log('helper export test "analyzeCaptionStart" failed.')
     console.log(err)
   }
 

@@ -1,6 +1,6 @@
 {
   "type": {
-    "inter-word-space": false
+    "label-layout": "compact"
   },
   "markReg": {
     "img": "(図|画像|イラスト|写真)",
@@ -12,8 +12,16 @@
     "slide": "(スライド|発表資料)",
     "audio": "(音(?:声|楽)?|サウンド)"
   },
-  "fallbackLabels": {
-    "img": "図",
-    "table": "表"
+  "generatedLabelDefaults": {
+    "img": {
+      "label": "図",
+      "joint": "　",
+      "space": ""
+    },
+    "table": {
+      "label": "表",
+      "joint": "　",
+      "space": ""
+    }
   }
 }

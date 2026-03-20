@@ -29,22 +29,26 @@ For integrations such as `p7d-markdown-it-figure-with-p-caption`, the package al
 
 ```js
 import mditPCaption, {
+  analyzeCaptionStart,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
-  normalizeLabelPrefixMarkers,
+  getGeneratedLabelDefaults,
   getFallbackLabelForText,
   setCaptionParagraph,
   getMarkRegForLanguages,
   getMarkRegStateForLanguages,
+  normalizeLabelPrefixMarkers,
   stripLabelPrefixMarker,
 } from 'p7d-markdown-it-p-captions';
 ```
 
-- `getMarkRegForLanguages(languages)` returns the regex map previously accessed as `markReg`.
-- `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`languages`, `markReg`, `markRegEntries`, candidate entry tables, and `fallbackLabelsByLang`).
-- `getFallbackLabelForText(mark, text, markRegState)` resolves a language-aware fallback label such as `Figure` / `図` or `Table` / `表`.
+- `getMarkRegForLanguages(languages)` returns the cached matcher map used for caption-start detection. Each matcher exposes `exec()` / `test()` like a regex, but mixed-language configs may use multiple compiled regexes internally.
+- `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`languages`, `markReg`, `markRegEntries`, candidate entry tables, and `generatedLabelDefaultsByLang`). If `languages` is explicitly provided but none of them are supported, it returns an empty state instead of falling back to the default `en/ja` set.
+- `analyzeCaptionStart(text, options)` performs a pure read-only caption-start analysis without mutating markdown-it tokens.
+- `getGeneratedLabelDefaults(mark, text, markRegState, preferredLanguages)` resolves locale-aware generated-label metadata such as `{ label: 'Figure', joint: '.', space: ' ' }`. `preferredLanguages` is optional and is used only as the tie-break order for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the state language order instead of disabling fallback generation.
+- `getFallbackLabelForText(mark, text, markRegState, preferredLanguages)` remains available as the small helper that returns only the generated label word.
 - `normalizeLabelPrefixMarkers(value)`, `buildLabelPrefixMarkerRegFromMarkers(markers)`, and `stripLabelPrefixMarker(inlineToken, markerText)` expose the same label-prefix handling used internally by `setCaptionParagraph`.
-- `buildLabelClassLookup(options)` returns the label-class candidates used by integrators that need to patch generated caption label text after `setCaptionParagraph`.
+- `buildLabelClassLookup(options)` returns the label-class candidates used by integrators that patch generated caption label text later.
 - The returned state is a shared cache object. Treat it as read-only; if you need to modify it, clone it first.
 
 If you call `setCaptionParagraph` directly (outside `md.use(mditPCaption, options)`), pass `markRegState` in your options when you use non-default languages:
@@ -68,15 +72,66 @@ sp.captionDecision = {
 };
 ```
 
-Language files under `lang/*.json` may also define `fallbackLabels`. These are used by `getFallbackLabelForText` and exposed on `markRegState.fallbackLabelsByLang` for integrators that auto-generate captions from `alt` / `title` text.
+Language files under `lang/*.json` may define `generatedLabelDefaults`. These are used by `getGeneratedLabelDefaults` and also exposed on `markRegState.generatedLabelDefaultsByLang`.
+
+Language metadata under `lang/*.json` also defines:
+
+- `type['label-layout']`: caption label syntax shape (`'spaced'` for forms like `Figure 1. Caption`, `'compact'` for forms like `図1　キャプション`)
+- `markReg` entries may be plain strings or `{ pattern, 'match-case' }` objects
+- `'match-case'`: label-word matching strategy (`'auto'`, `'ascii'`, `'unicode'`, or `'raw'`)
+- `pattern` should contain only the label word/phrase portion. The package wraps it internally; you do not need to add your own outer capture group.
+
+If you want to add a new language to the package, see [docs/adding-language.md](./docs/adding-language.md).
+
+When multiple languages are active, generated-label fallback resolves in this order:
+
+1. `preferredLanguages` reordered onto the active `state.languages` set (if provided)
+2. script-specific detection (for example Japanese text -> `ja`)
+3. the first remaining language in that tie-break order
+
+This affects only unlabeled fallback text such as `autoAltCaption: true` integrations. Normal caption detection still checks every enabled language regex.
 
 ```json
 {
-  "fallbackLabels": {
-    "img": "Figure",
-    "table": "Table"
+  "type": {
+    "label-layout": "spaced"
+  },
+  "markReg": {
+    "img": {
+      "pattern": "(fig(?:ure)?|photo)",
+      "match-case": "auto"
+    }
+  },
+  "generatedLabelDefaults": {
+    "img": {
+      "label": "Figure",
+      "joint": ".",
+      "space": " "
+    }
   }
 }
+```
+
+Example pure analyzer usage:
+
+```js
+const markRegState = getMarkRegStateForLanguages(['en', 'ja']);
+
+analyzeCaptionStart('Figure 1. A caption.', {
+  markRegState,
+  preferredMark: 'img',
+});
+// {
+//   mark: 'img',
+//   kind: 'caption',
+//   matchedText: 'Figure 1.',
+//   labelText: 'Figure',
+//   number: '1',
+//   joint: '.',
+//   bodyText: 'A caption.',
+//   hasExplicitNumber: true,
+//   prefixMarker: ''
+// }
 ```
 
 ## Caption detection rules
