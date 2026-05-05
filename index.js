@@ -341,8 +341,6 @@ const getMarkRegStateFromOpt = (opt) => {
   return defaultMarkRegState
 }
 
-const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key)
-
 const normalizeClassPrefix = (value) => {
   if (value === null || value === undefined) return 'caption'
   return String(value).trim()
@@ -378,6 +376,7 @@ const baseSetCaptionOpt = {
 }
 
 const defaultSetCaptionOpt = Object.assign({}, baseSetCaptionOpt)
+const baseSetCaptionOptKeys = Object.keys(baseSetCaptionOpt)
 
 const resolveSetCaptionOpt = (opt) => {
   if (!opt || typeof opt !== 'object') return defaultSetCaptionOpt
@@ -385,10 +384,14 @@ const resolveSetCaptionOpt = (opt) => {
   const cached = normalizedSetCaptionOptCache.get(opt)
   if (cached) return cached
 
-  const hasExplicitLabelClassFollowsFigure = hasOwn(opt, 'labelClassFollowsFigure')
-  const normalized = Object.assign({}, baseSetCaptionOpt, opt)
+  const hasConfiguredLabelClassFollowsFigure = 'labelClassFollowsFigure' in opt
+  const normalized = Object.assign({}, baseSetCaptionOpt)
+  for (let i = 0; i < baseSetCaptionOptKeys.length; i++) {
+    const key = baseSetCaptionOptKeys[i]
+    if (key in opt) normalized[key] = opt[key]
+  }
   normalized.classPrefix = normalizeClassPrefix(normalized.classPrefix)
-  if (!hasExplicitLabelClassFollowsFigure && normalized.figureToLabelClassMap) {
+  if (!hasConfiguredLabelClassFollowsFigure && normalized.figureToLabelClassMap) {
     normalized.labelClassFollowsFigure = true
   }
   if (
@@ -633,7 +636,7 @@ const decodeCaptionMatch = (match) => {
 }
 
 const buildLabelClassLookup = (opt) => {
-  const classPrefix = normalizeClassPrefix(opt && hasOwn(opt, 'classPrefix') ? opt.classPrefix : 'caption')
+  const classPrefix = normalizeClassPrefix(opt && 'classPrefix' in opt ? opt.classPrefix : 'caption')
   const defaultClasses = [joinClassPrefix(classPrefix, 'label')]
   const withType = (type) => {
     if (opt && opt.removeMarkNameInCaptionClass) return defaultClasses

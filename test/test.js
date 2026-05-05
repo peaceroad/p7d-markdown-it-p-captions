@@ -345,6 +345,29 @@ const runSetCaptionParagraphTests = () => {
     console.log('setCaptionParagraph test "figure class mirroring with partial opt" failed.')
   }
 
+  try {
+    const baseOpt = {
+      classPrefix: 'f',
+      markRegState: getMarkRegStateForLanguages(['en']),
+      setFigureNumber: true,
+      labelClassFollowsFigure: false,
+    }
+    const inheritedOpt = Object.create(baseOpt)
+    const state = createStateForMarkdown('Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const fNum = { img: 0, table: 0 }
+    const result = setCaptionParagraph(paragraphIndex, state, null, fNum, null, inheritedOpt)
+    const actual = parserForState.renderer.render(state.tokens, parserForState.options, {})
+    assert.strictEqual(result, true)
+    assert.strictEqual(
+      actual,
+      '<p class="f-img"><span class="f-img-label">Figure 1<span class="f-img-label-joint">.</span></span> A cat.</p>\n',
+    )
+  } catch (err) {
+    ok = false
+    console.log('setCaptionParagraph test "inherited opt properties" failed.')
+  }
+
   return ok
 }
 
@@ -456,6 +479,14 @@ const runHelperExportTests = () => {
         img: ['img-label', 'label'],
         table: ['table-label', 'label'],
         default: ['label'],
+      },
+    )
+    assert.deepStrictEqual(
+      buildLabelClassLookup(Object.create({ classPrefix: 'f', removeMarkNameInCaptionClass: false })),
+      {
+        img: ['f-img-label', 'f-label'],
+        table: ['f-table-label', 'f-label'],
+        default: ['f-label'],
       },
     )
   } catch (err) {
