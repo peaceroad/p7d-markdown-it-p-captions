@@ -14,15 +14,16 @@
 - `langMarkSpecCache` caches per-language mark matcher specs after applying required `type['label-layout']` suffix rules and per-mark `match-case` handling.
 - `langGeneratedLabelDefaultsCache` caches normalized `generatedLabelDefaults` per language.
 - `markRegState` caches language-set state (`languages`, `markReg`, `markRegEntries`, prebuilt candidate entry tables, and `generatedLabelDefaultsByLang`).
-- Language keys are normalized (valid-only, deduped, sorted) before cache lookup.
+- Language keys are normalized valid-only and deduped while preserving caller order before cache lookup.
 - When `languages` is explicitly provided but no valid language remains, state resolution returns an empty state rather than falling back to the default `en/ja` set.
 - `setCaptionParagraph` resolves regex state from `opt.markRegState` with a safe fallback to default languages.
 - `getMarkRegStateForLanguages` returns cached objects by reference; integrators must treat returned state as immutable.
-- Generated-label resolution (`getGeneratedLabelDefaults` / `getFallbackLabelForText`) reads `generatedLabelDefaultsByLang` from the cached state and accepts optional `preferredLanguages` only as a tie-break for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the state language order rather than disabling fallback generation. Do not add a second locale cache on top.
+- Generated-label resolution (`getGeneratedLabelDefaults` / `getFallbackLabelForText`) reads `generatedLabelDefaultsByLang` from the cached state and accepts optional `preferredLanguages` only as a tie-break for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the caller-preserved state language order rather than disabling fallback generation. Do not add a second locale cache on top.
 
 ## 4. Caption Detection Hot Path
 - First gate is `isLikelyCaptionStart(content)` to skip non-candidates quickly.
 - Optional marker regex (`labelPrefixMarker`) runs only when needed; marker stripping happens only after a label match.
+- `labelPrefixMarker` arrays keep the first two non-empty string entries, ignore non-string/nullish entries, and compile longest-first so prefix-related markers are order-stable.
 - Candidate mark entries are narrowed up-front by `caption.name`, `sp.isIframeTypeBlockquote`, and `sp.isVideoIframe`.
 - `analyzeCaptionStart` is the pure read-only helper for this detection path; `setCaptionParagraph` now delegates its leading-label parse to that helper instead of duplicating regex decode logic.
 - `type['label-layout']` controls only the shared suffix syntax (`spaced` vs `compact`); label-word matching is controlled per mark through string shorthand or `{ pattern, 'match-case' }`.
@@ -39,6 +40,8 @@
 - `removeUnnumberedLabel` can drop labels unless the mark is whitelisted.
 
 ## 6. Class Name Resolution
+- `classPrefix` is normalized once through setup/helper option normalization: `null` / `undefined` => `caption`, surrounding whitespace is trimmed, and `''` means no prefix.
+- Class names are assembled through prefix-aware helpers so no-prefix output is `img`, `img-label`, `img-label-joint`, and `img-body` rather than `-img`.
 - `buildStaticClassTables` precomputes:
   - `paragraphClassByMark`
   - `captionClassByMark` (`label`, `label-joint`, `body`)
@@ -83,9 +86,18 @@
   - `getMarkRegStateForLanguages`
   - `stripLabelPrefixMarker`
 - `markReg` direct export is removed; integrators should build matcher maps via `getMarkRegForLanguages(languages)`.
+- `setCaptionParagraph` returns `true` when it mutates a caption paragraph and `false` for no-op/guard exits. Callers should not expect the old no-op `caption` return value.
+- Direct `setCaptionParagraph` callers may pass partial option objects; missing fields are filled with plugin defaults and normalized before use.
+- Direct helper option objects are cached by object identity after normalization; callers should treat them as immutable and pass a fresh object for different settings.
+- Repeated `.use(mditPCaption)` calls on the same markdown-it instance are intentionally ignored. Use separate markdown-it instances for different option sets.
 
-## 12. Test Coverage
+## 12. Runtime Compatibility
+- JSON import attributes in `lang.js` are intentional.
+- Use a runtime version that supports the `with { type: 'json' }` import-attributes syntax.
+
+## 13. Test Coverage
 - Fixtures under `test/` drive expected HTML output.
 - Helper-level tests verify:
   - `setCaptionParagraph` direct-call behavior, including `sp.captionDecision` compatibility and missing-`opt` fallback safety.
-  - pure helper exports such as `analyzeCaptionStart`, `getGeneratedLabelDefaults`, `getFallbackLabelForText`, marker-prefix helpers, class lookup generation, `preferredLanguages` tie-break behavior, and empty-state behavior for unsupported language lists.
+  - pure helper exports such as `analyzeCaptionStart`, `getGeneratedLabelDefaults`, `getFallbackLabelForText`, marker-prefix helpers, class lookup generation, `preferredLanguages` tie-break behavior, language-order tie-break behavior, and empty-state behavior for unsupported language lists.
+  - option normalization edge cases such as no-prefix classes, whitespace-trimmed prefixes, duplicate `.use()` calls, and longest-first label prefix markers.

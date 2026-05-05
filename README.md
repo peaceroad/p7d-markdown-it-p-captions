@@ -2,6 +2,8 @@
 
 p7d-markdown-it-p-captions is a markdown-it plugin. For a paragraph, it determines if it is a caption from the string at the beginning of the paragraph and adds a class attribute value to indicate that it is a caption.
 
+This package uses ESM JSON import attributes, so use a runtime version that supports the `with { type: 'json' }` import-attributes syntax.
+
 ```js
 import mdit from 'markdown-it'
 import mditPCaption from 'p7d-markdown-it-p-captions'
@@ -23,6 +25,21 @@ console.log(md.render(src));
 // <p class="f-img"><span class="f-img-label">Figure 1<span class="f-img-label-joint">.</span></span> A caption.</p>
 ```
 
+`classPrefix` is normalized at plugin setup:
+
+- `null` / `undefined` use the default prefix, `caption`.
+- surrounding whitespace is trimmed.
+- an empty string is accepted as an explicit no-prefix setting.
+
+```js
+const md = mdit().use(mditPCaption, { classPrefix: '' })
+
+console.log(md.render('Figure 1. A caption.\n'));
+// <p class="img"><span class="img-label">Figure 1<span class="img-label-joint">.</span></span> A caption.</p>
+```
+
+Install the plugin only once on a markdown-it instance. If `.use(mditPCaption)` is called more than once on the same instance, later calls are ignored. Use a separate markdown-it instance when you need a different option set.
+
 ## Helper APIs for Integrators
 
 For integrations such as `p7d-markdown-it-figure-with-p-caption`, the package also exports helpers:
@@ -43,7 +60,7 @@ import mditPCaption, {
 ```
 
 - `getMarkRegForLanguages(languages)` returns the cached matcher map used for caption-start detection. Each matcher exposes `exec()` / `test()` like a regex, but mixed-language configs may use multiple compiled regexes internally.
-- `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`languages`, `markReg`, `markRegEntries`, candidate entry tables, and `generatedLabelDefaultsByLang`). If `languages` is explicitly provided but none of them are supported, it returns an empty state instead of falling back to the default `en/ja` set.
+- `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`languages`, `markReg`, `markRegEntries`, candidate entry tables, and `generatedLabelDefaultsByLang`). Valid language order is preserved after filtering duplicates and unsupported languages. If `languages` is explicitly provided but none of them are supported, it returns an empty state instead of falling back to the default `en/ja` set.
 - `analyzeCaptionStart(text, options)` performs a pure read-only caption-start analysis without mutating markdown-it tokens.
 - `getGeneratedLabelDefaults(mark, text, markRegState, preferredLanguages)` resolves locale-aware generated-label metadata such as `{ label: 'Figure', joint: '.', space: ' ' }`. `preferredLanguages` is optional and is used only as the tie-break order for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the state language order instead of disabling fallback generation.
 - `getFallbackLabelForText(mark, text, markRegState, preferredLanguages)` remains available as the small helper that returns only the generated label word.
@@ -61,6 +78,8 @@ const opt = {
   // ...other options used by setCaptionParagraph
 };
 ```
+
+`setCaptionParagraph` mutates the token stream and returns a boolean: `true` when it detected and transformed a caption paragraph, otherwise `false`. Direct callers may pass partial options; missing fields use the same defaults as the plugin setup path. Treat the options object as immutable after the first helper call; create a new options object if you need different settings.
 
 When `sp` is provided to `setCaptionParagraph`, the helper writes:
 
@@ -88,6 +107,8 @@ When multiple languages are active, generated-label fallback resolves in this or
 1. `preferredLanguages` reordered onto the active `state.languages` set (if provided)
 2. script-specific detection (for example Japanese text -> `ja`)
 3. the first remaining language in that tie-break order
+
+Because `getMarkRegStateForLanguages(languages)` preserves the caller's valid language order, that order is the final tie-break when `preferredLanguages` and script-specific detection do not choose a language. For example, `['ja', 'en']` prefers Japanese generated labels for otherwise ambiguous text, while the default plugin language order remains `['en', 'ja']`.
 
 This affects only unlabeled fallback text such as `autoAltCaption: true` integrations. Normal caption detection still checks every enabled language regex.
 
@@ -295,6 +316,8 @@ console.log(md.render(src));
 ```js
 md.use(mditPCaption, { labelPrefixMarker: ['▼', '▲'] });
 ```
+
+Array entries must be non-empty strings. `null`, `undefined`, empty strings, and non-string values are ignored. When marker strings overlap, the longest marker is matched first so `['*', '**']` behaves the same as `['**', '*']`.
 
 ## Option: Convert full-width space in label joint to half-width
 

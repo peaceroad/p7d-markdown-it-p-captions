@@ -1,7 +1,7 @@
 import langSets from './lang.js'
 
 const allLangs = Object.keys(langSets)
-const allLangsKey = allLangs.slice().sort().join(',')
+const allLangsKey = allLangs.join(',')
 
 const markAfterNum = '[A-Z0-9]{1,6}(?:[.-][A-Z0-9]{1,6}){0,5}'
 const joint = '[.:．。：　]'
@@ -306,42 +306,69 @@ const createMarkRegState = (langs) => {
 const emptyMarkRegState = createMarkRegState([])
 const defaultMarkRegState = createMarkRegState(allLangs)
 const markRegCache = new Map()
+const normalizedOptionKey = Symbol('pCaptionNormalizedOption')
+const normalizedSetCaptionOptCache = new WeakMap()
+const installedKey = Symbol.for('p7d-markdown-it-p-captions.installed')
 
 const resolveMarkRegState = (languages) => {
   if (!Array.isArray(languages)) return defaultMarkRegState
   const validLangs = normalizeLanguages(languages)
   if (validLangs.length === 0) return emptyMarkRegState
-  const normalizedLangs = validLangs.slice().sort()
-  const langKey = normalizedLangs.join(',')
+  const langKey = validLangs.join(',')
   if (langKey === allLangsKey) return defaultMarkRegState
   const cachedState = markRegCache.get(langKey)
   if (cachedState) return cachedState
-  const state = createMarkRegState(normalizedLangs)
+  const state = createMarkRegState(validLangs)
   markRegCache.set(langKey, state)
   return state
 }
 
+const isMarkRegState = (value) => (
+  !!(
+    value &&
+    value.markReg &&
+    Array.isArray(value.markRegEntries)
+  )
+)
+
 const getMarkRegStateFromOpt = (opt) => {
   if (
     opt &&
-    opt.markRegState &&
-    opt.markRegState.markReg &&
-    Array.isArray(opt.markRegState.markRegEntries)
+    isMarkRegState(opt.markRegState)
   ) {
     return opt.markRegState
   }
   return defaultMarkRegState
 }
 
-const defaultSetCaptionOpt = {
-  markRegState: defaultMarkRegState,
+const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key)
+
+const normalizeClassPrefix = (value) => {
+  if (value === null || value === undefined) return 'caption'
+  return String(value).trim()
+}
+
+const joinClassPrefix = (prefix, suffix) => {
+  return prefix ? prefix + '-' + suffix : suffix
+}
+
+const baseSetCaptionOpt = {
+  languages: ['en', 'ja'],
   classPrefix: 'caption',
+  markRegState: defaultMarkRegState,
+  dquoteFilename: false,
+  strongFilename: false,
+  hasNumClass: false,
+  bLabel: false,
+  strongLabel: false,
   setFigureNumber: false,
   jointSpaceUseHalfWidth: false,
   removeUnnumberedLabel: false,
+  removeUnnumberedLabelExceptMarks: [],
   removeUnnumberedLabelExceptMarksSet: null,
   wrapCaptionBody: false,
   labelPrefixMarkerReg: null,
+  labelPrefixMarker: null,
   labelPrefixMarkerNeedsCheckOnLikelyStart: false,
   paragraphClassByMark: null,
   captionClassByMark: null,
@@ -350,7 +377,40 @@ const defaultSetCaptionOpt = {
   figureToLabelClassMap: null,
 }
 
-const resolveSetCaptionOpt = (opt) => (opt ? opt : defaultSetCaptionOpt)
+const defaultSetCaptionOpt = Object.assign({}, baseSetCaptionOpt)
+
+const resolveSetCaptionOpt = (opt) => {
+  if (!opt || typeof opt !== 'object') return defaultSetCaptionOpt
+  if (opt[normalizedOptionKey]) return opt
+  const cached = normalizedSetCaptionOptCache.get(opt)
+  if (cached) return cached
+
+  const hasExplicitLabelClassFollowsFigure = hasOwn(opt, 'labelClassFollowsFigure')
+  const normalized = Object.assign({}, baseSetCaptionOpt, opt)
+  normalized.classPrefix = normalizeClassPrefix(normalized.classPrefix)
+  if (!hasExplicitLabelClassFollowsFigure && normalized.figureToLabelClassMap) {
+    normalized.labelClassFollowsFigure = true
+  }
+  if (
+    Array.isArray(normalized.removeUnnumberedLabelExceptMarks) &&
+    normalized.removeUnnumberedLabelExceptMarks.length > 0
+  ) {
+    normalized.removeUnnumberedLabelExceptMarksSet = new Set(normalized.removeUnnumberedLabelExceptMarks)
+  } else {
+    normalized.removeUnnumberedLabelExceptMarksSet = null
+  }
+
+  const labelPrefixMarkers = normalizeLabelPrefixMarkers(normalized.labelPrefixMarker)
+  normalized.labelPrefixMarkerReg = buildLabelPrefixMarkerRegFromMarkers(labelPrefixMarkers)
+  normalized.labelPrefixMarkerNeedsCheckOnLikelyStart = labelPrefixMarkers.some(marker => isLikelyCaptionStart(marker))
+  normalized.markRegState = isMarkRegState(opt.markRegState)
+    ? opt.markRegState
+    : resolveMarkRegState(normalized.languages)
+  buildStaticClassTables(normalized)
+  normalized[normalizedOptionKey] = true
+  normalizedSetCaptionOptCache.set(opt, normalized)
+  return normalized
+}
 
 const getMarkRegStateForLanguages = (languages) => resolveMarkRegState(languages)
 const getMarkRegForLanguages = (languages) => resolveMarkRegState(languages).markReg
@@ -465,14 +525,20 @@ const normalizeLabelPrefixMarkers = (value) => {
     return value ? [value] : []
   }
   if (Array.isArray(value)) {
-    const normalized = value.map(entry => String(entry)).filter(Boolean)
+    const normalized = value.filter(entry => typeof entry === 'string' && entry)
     return normalized.length > 2 ? normalized.slice(0, 2) : normalized
   }
   return []
 }
 const buildLabelPrefixMarkerRegFromMarkers = (markers) => {
-  if (!markers.length) return null
-  const pattern = markers.map(escapeRegExp).join('|')
+  if (!Array.isArray(markers) || !markers.length) return null
+  const markerList = markers.filter(entry => typeof entry === 'string' && entry)
+  if (!markerList.length) return null
+  const pattern = markerList
+    .slice()
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join('|')
   return new RegExp('^(?:' + pattern + ')(?:[ \\t　]+)?')
 }
 const trimAsciiSpacesStart = (text) => {
@@ -567,11 +633,11 @@ const decodeCaptionMatch = (match) => {
 }
 
 const buildLabelClassLookup = (opt) => {
-  const prefix = opt && opt.classPrefix ? opt.classPrefix + '-' : ''
-  const defaultClasses = [prefix + 'label']
+  const classPrefix = normalizeClassPrefix(opt && hasOwn(opt, 'classPrefix') ? opt.classPrefix : 'caption')
+  const defaultClasses = [joinClassPrefix(classPrefix, 'label')]
   const withType = (type) => {
     if (opt && opt.removeMarkNameInCaptionClass) return defaultClasses
-    return [prefix + type + '-label', ...defaultClasses]
+    return [joinClassPrefix(classPrefix, type + '-label'), ...defaultClasses]
   }
   return {
     img: withType('img'),
@@ -719,11 +785,11 @@ const resolveFigureLabelBases = (sp, opt) => {
   return bases
 }
 
-const getDefaultLabelBase = (mark, opt) => {
-  const prefix = opt.classPrefix || ''
-  if (!prefix) return ''
-  if (opt.removeMarkNameInCaptionClass) return prefix
-  return prefix + '-' + mark
+const buildParagraphClassName = (mark, opt) => joinClassPrefix(opt.classPrefix, mark)
+
+const buildDefaultCaptionClassName = (mark, suffix, opt) => {
+  const classSuffix = opt.removeMarkNameInCaptionClass ? suffix : mark + '-' + suffix
+  return joinClassPrefix(opt.classPrefix, classSuffix)
 }
 
 const buildStaticClassTables = (opt) => {
@@ -733,12 +799,11 @@ const buildStaticClassTables = (opt) => {
   const captionClassByMark = Object.create(null)
   for (let i = 0; i < marks.length; i++) {
     const mark = marks[i]
-    paragraphClassByMark[mark] = opt.classPrefix + '-' + mark
-    const base = getDefaultLabelBase(mark, opt)
+    paragraphClassByMark[mark] = buildParagraphClassName(mark, opt)
     captionClassByMark[mark] = {
-      label: base ? appendSuffixIfMissing(base, 'label') : '',
-      'label-joint': base ? appendSuffixIfMissing(base, 'label-joint') : '',
-      body: base ? appendSuffixIfMissing(base, 'body') : '',
+      label: buildDefaultCaptionClassName(mark, 'label', opt),
+      'label-joint': buildDefaultCaptionClassName(mark, 'label-joint', opt),
+      body: buildDefaultCaptionClassName(mark, 'body', opt),
     }
   }
   opt.paragraphClassByMark = paragraphClassByMark
@@ -751,19 +816,16 @@ const buildCaptionClassNames = (mark, suffix, sp, opt) => {
     if (staticClasses && Object.prototype.hasOwnProperty.call(staticClasses, suffix)) {
       return staticClasses[suffix]
     }
-    const defaultBase = getDefaultLabelBase(mark, opt)
-    return defaultBase ? appendSuffixIfMissing(defaultBase, suffix) : ''
+    return buildDefaultCaptionClassName(mark, suffix, opt)
   }
 
   const figureBases = resolveFigureLabelBases(sp, opt)
-  const defaultBase = getDefaultLabelBase(mark, opt)
+  const defaultClassName = buildDefaultCaptionClassName(mark, suffix, opt)
   if (figureBases.length === 0) {
-    return defaultBase ? appendSuffixIfMissing(defaultBase, suffix) : ''
+    return defaultClassName
   }
   if (figureBases.length === 1) {
     const figureClassName = appendSuffixIfMissing(figureBases[0], suffix)
-    if (!defaultBase) return figureClassName
-    const defaultClassName = appendSuffixIfMissing(defaultBase, suffix)
     if (!defaultClassName || defaultClassName === figureClassName) return figureClassName
     return figureClassName + ' ' + defaultClassName
   }
@@ -776,11 +838,8 @@ const buildCaptionClassNames = (mark, suffix, sp, opt) => {
     seen.add(resolved)
     classNames.push(resolved)
   }
-  if (defaultBase) {
-    const defaultClassName = appendSuffixIfMissing(defaultBase, suffix)
-    if (defaultClassName && !seen.has(defaultClassName)) {
-      classNames.push(defaultClassName)
-    }
+  if (defaultClassName && !seen.has(defaultClassName)) {
+    classNames.push(defaultClassName)
   }
   if (classNames.length === 0) return ''
   if (classNames.length === 1) return classNames[0]
@@ -788,41 +847,14 @@ const buildCaptionClassNames = (mark, suffix, sp, opt) => {
 }
 
 const mditPCaption = (md, option) => {
-  const hasExplicitLabelClassFollowsFigure = option && Object.prototype.hasOwnProperty.call(option, 'labelClassFollowsFigure')
-  const opt = {
-    languages: ['en', 'ja'], // limit detection to lang/*.json entries; unknown codes are ignored
-    classPrefix: 'caption',
-    dquoteFilename: false,
-    strongFilename: false,
-    hasNumClass: false,
-    bLabel: false,
-    strongLabel: false,
-    jointSpaceUseHalfWidth: false,
-    removeUnnumberedLabel: false,
-    removeUnnumberedLabelExceptMarks: [],
-    setFigureNumber: false,
-    removeMarkNameInCaptionClass: false,
-    wrapCaptionBody: false,
-    labelClassFollowsFigure: false, // when true, reuse sp.figureClassName (or map overrides) for label/body spans
-    figureToLabelClassMap: null, // optional overrides: { figureClassName: 'custom-label-base another-base' }
-    labelPrefixMarker: null, // optional leading marker(s) before label, e.g. '*' or ['*', '>']
-  }
-  if (option) Object.assign(opt, option)
-  if (!hasExplicitLabelClassFollowsFigure && opt.figureToLabelClassMap) {
-    opt.labelClassFollowsFigure = true
-  }
-  if (Array.isArray(opt.removeUnnumberedLabelExceptMarks) && opt.removeUnnumberedLabelExceptMarks.length > 0) {
-    opt.removeUnnumberedLabelExceptMarksSet = new Set(opt.removeUnnumberedLabelExceptMarks)
-  } else {
-    opt.removeUnnumberedLabelExceptMarksSet = null
-  }
-  const labelPrefixMarkers = normalizeLabelPrefixMarkers(opt.labelPrefixMarker)
-  opt.labelPrefixMarkerReg = buildLabelPrefixMarkerRegFromMarkers(labelPrefixMarkers)
-  opt.labelPrefixMarkerNeedsCheckOnLikelyStart = labelPrefixMarkers.some(marker => isLikelyCaptionStart(marker))
+  if (md[installedKey]) return
+  Object.defineProperty(md, installedKey, {
+    value: true,
+    configurable: true,
+  })
 
-  // Resolve regex state per plugin instance and avoid mutating shared module globals.
-  opt.markRegState = resolveMarkRegState(opt.languages)
-  buildStaticClassTables(opt)
+  // Resolve regex/options once per plugin instance and avoid mutating shared module globals.
+  const opt = resolveSetCaptionOpt(option || {})
 
   md.core.ruler.after('inline', 'p-caption', (state) => {
     const fNum = {
@@ -840,19 +872,19 @@ const mditPCaption = (md, option) => {
 
 const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   opt = resolveSetCaptionOpt(opt)
-  if (!state || !state.tokens || typeof n !== 'number' || n < 0) return caption
+  if (!state || !state.tokens || typeof n !== 'number' || n < 0) return false
   const tokens = state.tokens
-  if (n >= tokens.length) return caption
+  if (n >= tokens.length) return false
   if (!fNum || typeof fNum !== 'object') {
     fNum = { img: 0, table: 0 }
   }
   const token = tokens[n]
-  if (!token) return caption
-  if (token.type !== 'paragraph_open') return caption
-  if (n > 1 && tokens[n-1].type === 'list_item_open') return caption
+  if (!token) return false
+  if (token.type !== 'paragraph_open') return false
+  if (n > 1 && tokens[n-1].type === 'list_item_open') return false
   const nextToken = tokens[n+1]
-  if (!nextToken || nextToken.type !== 'inline') return caption
-  if (!nextToken.children || nextToken.children.length === 0 || !nextToken.children[0]) return caption
+  if (!nextToken || nextToken.type !== 'inline') return false
+  if (!nextToken.children || nextToken.children.length === 0 || !nextToken.children[0]) return false
   const content = typeof nextToken.content === 'string' ? nextToken.content : ''
 
   // caption/sp may be provided by integrators to enforce cross-block constraints
@@ -868,7 +900,7 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
     labelPrefixMarkerReg: opt.labelPrefixMarkerReg,
     labelPrefixMarkerNeedsCheckOnLikelyStart: opt.labelPrefixMarkerNeedsCheckOnLikelyStart,
   })
-  if (!analysis) return caption
+  if (!analysis) return false
 
   if (analysis.prefixMarker) {
     stripLabelPrefixMarker(nextToken, analysis.prefixMarker)
@@ -882,7 +914,7 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
   }
 
   const paragraphClass = opt.paragraphClassByMark && opt.paragraphClassByMark[analysis.mark]
-  token.attrJoin('class', paragraphClass || (opt.classPrefix + '-' + analysis.mark))
+  token.attrJoin('class', paragraphClass || buildParagraphClassName(analysis.mark, opt))
 
   if (opt.setFigureNumber && (analysis.mark === 'img' || analysis.mark === 'table')) {
     if (actualLabel.num === '') {
@@ -900,7 +932,7 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
     actualLabel.joint = ''
     convertJointSpaceFullWith = true
   }
-  addLabelToken(state, nextToken, analysis.mark, actualLabel, convertJointSpaceFullWith, opt, sp)
+  return addLabelToken(state, nextToken, analysis.mark, actualLabel, convertJointSpaceFullWith, opt, sp)
 }
 
 const replaceLeadingText = (text, mark, replacement) => {
@@ -935,7 +967,7 @@ const setFilename = (state, nextToken, mark, opt) => {
   const beforeFilenameToken = new state.Token('text', '', 0)
   beforeFilenameToken.content = filename[1]
   const filenameTokenOpen = new state.Token('strong_open', 'strong', 1)
-  filenameTokenOpen.attrSet('class', opt.classPrefix + '-' + mark + '-filename')
+  filenameTokenOpen.attrSet('class', buildParagraphClassName(mark + '-filename', opt))
   const filenameTokenContent = new state.Token('text', '', 0)
   filenameTokenContent.content = filename[2]
   const filenameTokenClose = new state.Token('strong_close', 'strong', -1)
@@ -994,7 +1026,7 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
       if(children[1].type === 'strong_open'
         && children[3].type === 'strong_close'
         && /^(?:[ 　]|$)/.test(children[4].content)) {
-        children[1].attrJoin('class', opt.classPrefix + '-' + mark + '-filename')
+        children[1].attrJoin('class', buildParagraphClassName(mark + '-filename', opt))
       }
     }
   }

@@ -134,6 +134,78 @@ suites.forEach((suite) => {
   pass = runSuite(suite) && pass
 })
 
+const runPluginOptionNormalizationTests = () => {
+  let ok = true
+  const assertRender = (name, md, markdown, expected) => {
+    try {
+      assert.strictEqual(md.render(markdown), expected)
+    } catch (err) {
+      ok = false
+      console.log(`plugin option normalization test "${name}" failed.`)
+      console.log(err)
+    }
+  }
+
+  assertRender(
+    'empty classPrefix',
+    mdit().use(mditPCaption, { classPrefix: '' }),
+    'Figure. A caption.',
+    '<p class="img"><span class="img-label">Figure<span class="img-label-joint">.</span></span> A caption.</p>\n',
+  )
+  assertRender(
+    'trimmed classPrefix',
+    mdit().use(mditPCaption, { classPrefix: ' f ' }),
+    'Figure. A caption.',
+    '<p class="f-img"><span class="f-img-label">Figure<span class="f-img-label-joint">.</span></span> A caption.</p>\n',
+  )
+  assertRender(
+    'null classPrefix falls back',
+    mdit().use(mditPCaption, { classPrefix: null }),
+    'Figure. A caption.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A caption.</p>\n',
+  )
+  assertRender(
+    'undefined classPrefix falls back',
+    mdit().use(mditPCaption, { classPrefix: undefined }),
+    'Figure. A caption.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A caption.</p>\n',
+  )
+  assertRender(
+    'duplicate use is ignored',
+    mdit().use(mditPCaption).use(mditPCaption),
+    'Figure. A caption.',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> A caption.</p>\n',
+  )
+  assertRender(
+    'prefix marker longest first',
+    mdit().use(mditPCaption, { labelPrefixMarker: ['*', '**'] }),
+    '** Figure. Caption',
+    '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> Caption</p>\n',
+  )
+  assertRender(
+    'empty classPrefix dquote filename',
+    mdit().use(mditPCaption, { classPrefix: '', dquoteFilename: true }),
+    'Code. "File.js" body',
+    '<p class="pre-code"><span class="pre-code-label">Code<span class="pre-code-label-joint">.</span></span> <strong class="pre-code-filename">File.js</strong> body</p>\n',
+  )
+  assertRender(
+    'empty classPrefix strong filename',
+    mdit().use(mditPCaption, { classPrefix: '', strongFilename: true }),
+    'Code. **File.js** body',
+    '<p class="pre-code"><span class="pre-code-label">Code<span class="pre-code-label-joint">.</span></span> <strong class="pre-code-filename">File.js</strong> body</p>\n',
+  )
+  assertRender(
+    'empty classPrefix without mark label class',
+    mdit().use(mditPCaption, { classPrefix: '', removeMarkNameInCaptionClass: true, wrapCaptionBody: true }),
+    'Figure. A caption.',
+    '<p class="img"><span class="label">Figure<span class="label-joint">.</span></span> <span class="body">A caption.</span></p>\n',
+  )
+
+  return ok
+}
+
+pass = runPluginOptionNormalizationTests() && pass
+
 // Clone defaults and parse markdown to ensure caption helper sees a realistic state
 const cloneBaseOption = () => JSON.parse(JSON.stringify(baseOptionForSetCaption))
 const createStateForMarkdown = (markdown) => ({
@@ -150,8 +222,8 @@ const applySetCaption = (markdown, caption, sp, opt = cloneBaseOption()) => {
     throw new Error('No paragraph_open token found for markdown: ' + markdown)
   }
   const fNum = { img: 0, table: 0 }
-  setCaptionParagraph(paragraphIndex, state, caption, fNum, sp, opt)
-  return { state, paragraphIndex }
+  const result = setCaptionParagraph(paragraphIndex, state, caption, fNum, sp, opt)
+  return { state, paragraphIndex, result }
 }
 
 // Run targeted tests that exercise the caption/sp guards and exported behavior.
@@ -160,10 +232,11 @@ const runSetCaptionParagraphTests = () => {
   const runCase = (name, markdown, captionArg, spArg, expectedClass) => {
     const caption = captionArg ? { ...captionArg } : captionArg
     const sp = spArg ? { ...spArg } : spArg
-    const { state, paragraphIndex } = applySetCaption(markdown, caption, sp)
+    const { state, paragraphIndex, result } = applySetCaption(markdown, caption, sp)
     const actualClass = state.tokens[paragraphIndex].attrGet('class') || null
     try {
       assert.strictEqual(actualClass, expectedClass)
+      assert.strictEqual(result, !!expectedClass)
       if (captionArg) assert.strictEqual(caption.name, captionArg.name)
       if (spArg && Object.prototype.hasOwnProperty.call(spArg, 'isVideoIframe')) {
         assert.strictEqual(sp.isVideoIframe, spArg.isVideoIframe)
@@ -189,9 +262,10 @@ const runSetCaptionParagraphTests = () => {
   const runDecisionCase = (name, markdown, optOverrides, expectedDecision) => {
     const sp = {}
     const opt = Object.assign(cloneBaseOption(), optOverrides || {})
-    const { state, paragraphIndex } = applySetCaption(markdown, undefined, sp, opt)
+    const { state, paragraphIndex, result } = applySetCaption(markdown, undefined, sp, opt)
     const actualClass = state.tokens[paragraphIndex].attrGet('class') || null
     try {
+      assert.strictEqual(result, true)
       assert.strictEqual(actualClass, 'caption-img')
       assert.deepStrictEqual(sp.captionDecision, expectedDecision)
     } catch (err) {
@@ -227,12 +301,48 @@ const runSetCaptionParagraphTests = () => {
     const state = createStateForMarkdown('Figure. A cat.\n')
     const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
     const fNum = { img: 0, table: 0 }
-    setCaptionParagraph(paragraphIndex, state, null, fNum, null, undefined)
+    const result = setCaptionParagraph(paragraphIndex, state, null, fNum, null, undefined)
     const actualClass = state.tokens[paragraphIndex].attrGet('class') || null
+    assert.strictEqual(result, true)
     assert.strictEqual(actualClass, 'caption-img')
   } catch (err) {
     ok = false
     console.log('setCaptionParagraph test "undefined opt fallback" failed.')
+  }
+
+  try {
+    const state = createStateForMarkdown('Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const fNum = { img: 0, table: 0 }
+    const result = setCaptionParagraph(paragraphIndex, state, null, fNum, null, {
+      markRegState: getMarkRegStateForLanguages(['en']),
+    })
+    const actualClass = state.tokens[paragraphIndex].attrGet('class') || null
+    assert.strictEqual(result, true)
+    assert.strictEqual(actualClass, 'caption-img')
+  } catch (err) {
+    ok = false
+    console.log('setCaptionParagraph test "partial opt fallback" failed.')
+  }
+
+  try {
+    const state = createStateForMarkdown('Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const fNum = { img: 0, table: 0 }
+    const sp = { figureClassName: 'figure-img' }
+    const result = setCaptionParagraph(paragraphIndex, state, null, fNum, sp, {
+      figureToLabelClassMap: { 'figure-img': 'media-figure' },
+      wrapCaptionBody: true,
+    })
+    const actual = parserForState.renderer.render(state.tokens, parserForState.options, {})
+    assert.strictEqual(result, true)
+    assert.strictEqual(
+      actual,
+      '<p class="caption-img"><span class="media-figure-label caption-img-label">Figure<span class="media-figure-label-joint caption-img-label-joint">.</span></span> <span class="media-figure-body caption-img-body">A cat.</span></p>\n',
+    )
+  } catch (err) {
+    ok = false
+    console.log('setCaptionParagraph test "figure class mirroring with partial opt" failed.')
   }
 
   return ok
@@ -247,15 +357,17 @@ const runHelperExportTests = () => {
     const stateA = getMarkRegStateForLanguages(['ja', 'en'])
     const stateB = getMarkRegStateForLanguages(['en', 'ja'])
     const enMarkReg = getMarkRegForLanguages(['en'])
-    assert.strictEqual(stateA, stateB)
+    assert.deepStrictEqual(stateA.languages, ['ja', 'en'])
+    assert.deepStrictEqual(stateB.languages, ['en', 'ja'])
+    assert.notStrictEqual(stateA, stateB)
     assert.ok(enMarkReg.img.test('Figure. A cat.'))
     assert.ok(enMarkReg.img.test('figure. A cat.'))
     assert.strictEqual(stateA.generatedLabelDefaultsByLang.en.img.label, 'Figure')
     assert.strictEqual(stateA.generatedLabelDefaultsByLang.ja.img.label, '図')
     assert.deepStrictEqual(getGeneratedLabelDefaults('img', 'A cat.', stateA), {
-      label: 'Figure',
-      joint: '.',
-      space: ' ',
+      label: '図',
+      joint: '　',
+      space: '',
     })
     assert.deepStrictEqual(getGeneratedLabelDefaults('img', '猫です。', stateA), {
       label: '図',
@@ -268,20 +380,21 @@ const runHelperExportTests = () => {
       space: '',
     })
     assert.deepStrictEqual(getGeneratedLabelDefaults('img', 'A cat.', stateA, ['de']), {
-      label: 'Figure',
-      joint: '.',
-      space: ' ',
+      label: '図',
+      joint: '　',
+      space: '',
     })
     assert.deepStrictEqual(getGeneratedLabelDefaults('img', '猫です。', stateA, ['en', 'ja']), {
       label: '図',
       joint: '　',
       space: '',
     })
-    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA), 'Figure')
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA), '図')
     assert.strictEqual(getFallbackLabelForText('img', '猫です。', stateA), '図')
     assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA, ['ja', 'en']), '図')
-    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA, ['de']), 'Figure')
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateA, ['de']), '図')
     assert.strictEqual(getFallbackLabelForText('img', '猫です。', stateA, ['en', 'ja']), '図')
+    assert.strictEqual(getFallbackLabelForText('img', 'A cat.', stateB), 'Figure')
     assert.strictEqual(getFallbackLabelForText('table', '表です。', stateA), '表')
     assert.strictEqual(getFallbackLabelForText('img', 'A cat.', getMarkRegStateForLanguages(['ja'])), '図')
     assert.strictEqual(getFallbackLabelForText('img', '猫です。', getMarkRegStateForLanguages(['en'])), 'Figure')
@@ -299,10 +412,16 @@ const runHelperExportTests = () => {
   try {
     const markers = normalizeLabelPrefixMarkers(['▼', '▲', '◇'])
     assert.deepStrictEqual(markers, ['▼', '▲'])
+    assert.deepStrictEqual(normalizeLabelPrefixMarkers([null, undefined, '', '▼']), ['▼'])
     const markerReg = buildLabelPrefixMarkerRegFromMarkers(markers)
     assert.ok(markerReg)
     assert.ok(markerReg.test('▼ Figure. A cat.'))
     assert.ok(markerReg.test('▲Figure. A cat.'))
+    const prefixMarkers = normalizeLabelPrefixMarkers(['*', '**'])
+    const prefixMarkerReg = buildLabelPrefixMarkerRegFromMarkers(prefixMarkers)
+    assert.strictEqual(prefixMarkerReg.exec('** Figure. A cat.')[0], '** ')
+    assert.strictEqual(buildLabelPrefixMarkerRegFromMarkers(null), null)
+    assert.strictEqual(buildLabelPrefixMarkerRegFromMarkers([null, undefined, '']), null)
 
     const inlineToken = createStateForMarkdown('▼Figure. A cat.\n').tokens.find(token => token.type === 'inline')
     stripLabelPrefixMarker(inlineToken, '▼')
@@ -329,6 +448,14 @@ const runHelperExportTests = () => {
         img: ['caption-label'],
         table: ['caption-label'],
         default: ['caption-label'],
+      },
+    )
+    assert.deepStrictEqual(
+      buildLabelClassLookup({ classPrefix: '', removeMarkNameInCaptionClass: false }),
+      {
+        img: ['img-label', 'label'],
+        table: ['table-label', 'label'],
+        default: ['label'],
       },
     )
   } catch (err) {
