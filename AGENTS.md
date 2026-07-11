@@ -26,6 +26,8 @@
 - `labelPrefixMarker` arrays keep the first two non-empty string entries, ignore non-string/nullish entries, and compile longest-first so prefix-related markers are order-stable.
 - Candidate mark entries are narrowed up-front by `caption.name`, `sp.isIframeTypeBlockquote`, and `sp.isVideoIframe`.
 - `analyzeCaptionStart` is the pure read-only helper for this detection path; `setCaptionParagraph` now delegates its leading-label parse to that helper instead of duplicating regex decode logic.
+- `analyzeCaptionParagraph` adds the paragraph/list and integration guards without mutation; `applyCaptionParagraph` validates the analyzer's private token snapshot before decorating tokens.
+- `setCaptionParagraph` is the compatibility analyze/apply wrapper. A successful apply stores the complete decision (including the original string `number`) on `sp.captionDecision`.
 - `type['label-layout']` controls only the shared suffix syntax (`spaced` vs `compact`); label-word matching is controlled per mark through string shorthand or `{ pattern, 'match-case' }`.
 - Special integration case preserved:
   - `blockquote` caption can accept `img` labels in iframe-type flows.
@@ -75,6 +77,8 @@
 - Default export: plugin factory (`mditPCaption`).
 - Named exports:
   - `analyzeCaptionStart`
+  - `analyzeCaptionParagraph`
+  - `applyCaptionParagraph`
   - `buildLabelClassLookup`
   - `buildLabelPrefixMarkerRegFromMarkers`
   - `getGeneratedLabelDefaults`
@@ -87,6 +91,7 @@
   - `stripLabelPrefixMarker`
 - `markReg` direct export is removed; integrators should build matcher maps via `getMarkRegForLanguages(languages)`.
 - `setCaptionParagraph` returns `true` when it mutates a caption paragraph and `false` for no-op/guard exits. Callers should not expect the old no-op `caption` return value.
+- Decisions returned by `analyzeCaptionParagraph` are frozen and must be passed by identity to `applyCaptionParagraph`; stale, copied, or reindexed decisions fail closed.
 - Direct `setCaptionParagraph` callers may pass partial option objects; missing fields are filled with plugin defaults and normalized before use.
 - Direct helper option objects are cached by object identity after normalization; callers should treat them as immutable and pass a fresh object for different settings.
 - Repeated `.use(mditPCaption)` calls on the same markdown-it instance are intentionally ignored. Use separate markdown-it instances for different option sets.
@@ -94,10 +99,12 @@
 ## 12. Runtime Compatibility
 - JSON import attributes in `lang.js` are intentional.
 - Use a runtime version that supports the `with { type: 'json' }` import-attributes syntax.
+- Markdown-it 14.2+ preserves paragraph-boundary Unicode spaces with `asciiTrim`, so label-only `図　` reaches the plugin. Markdown-it 14.1 and earlier remove U+3000 before inline processing and cannot detect that form.
 
 ## 13. Test Coverage
 - Fixtures under `test/` drive expected HTML output.
 - Helper-level tests verify:
   - `setCaptionParagraph` direct-call behavior, including `sp.captionDecision` compatibility and missing-`opt` fallback safety.
-  - pure helper exports such as `analyzeCaptionStart`, `getGeneratedLabelDefaults`, `getFallbackLabelForText`, marker-prefix helpers, class lookup generation, `preferredLanguages` tie-break behavior, language-order tie-break behavior, and empty-state behavior for unsupported language lists.
+  - pure helper exports such as `analyzeCaptionStart`, `analyzeCaptionParagraph`, `getGeneratedLabelDefaults`, `getFallbackLabelForText`, marker-prefix helpers, class lookup generation, `preferredLanguages` tie-break behavior, language-order tie-break behavior, and empty-state behavior for unsupported language lists.
+  - planner/apply behavior including purity, stale-decision rejection, prefix markers, list/integration guards, composite numbers, and generated-number metadata.
   - option normalization edge cases such as no-prefix classes, whitespace-trimmed prefixes, duplicate `.use()` calls, and longest-first label prefix markers.

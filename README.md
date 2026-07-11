@@ -46,7 +46,9 @@ For integrations such as `p7d-markdown-it-figure-with-p-caption`, the package al
 
 ```js
 import mditPCaption, {
+  analyzeCaptionParagraph,
   analyzeCaptionStart,
+  applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
   getGeneratedLabelDefaults,
@@ -62,13 +64,15 @@ import mditPCaption, {
 - `getMarkRegForLanguages(languages)` returns the cached matcher map used for caption-start detection. Each matcher exposes `exec()` / `test()` like a regex, but mixed-language configs may use multiple compiled regexes internally.
 - `getMarkRegStateForLanguages(languages)` returns the full prebuilt state (`languages`, `markReg`, `markRegEntries`, candidate entry tables, and `generatedLabelDefaultsByLang`). Valid language order is preserved after filtering duplicates and unsupported languages. If `languages` is explicitly provided but none of them are supported, it returns an empty state instead of falling back to the default `en/ja` set.
 - `analyzeCaptionStart(text, options)` performs a pure read-only caption-start analysis without mutating markdown-it tokens.
+- `analyzeCaptionParagraph(index, state, context, options)` applies the same paragraph/list and iframe/social/video guards as `setCaptionParagraph`, but only returns a frozen decision. It does not mutate tokens, `context`, or options.
+- `applyCaptionParagraph(decision, state, context, numberingState, options)` applies a decision returned by `analyzeCaptionParagraph`. It verifies the token array, block/inline token identities and types, inline content, children array, and every child identity/type/content before mutation; stale or copied decisions fail closed and return `false`.
 - `getGeneratedLabelDefaults(mark, text, markRegState, preferredLanguages)` resolves locale-aware generated-label metadata such as `{ label: 'Figure', joint: '.', space: ' ' }`. `preferredLanguages` is optional and is used only as the tie-break order for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the state language order instead of disabling fallback generation.
 - `getFallbackLabelForText(mark, text, markRegState, preferredLanguages)` remains available as the small helper that returns only the generated label word.
 - `normalizeLabelPrefixMarkers(value)`, `buildLabelPrefixMarkerRegFromMarkers(markers)`, and `stripLabelPrefixMarker(inlineToken, markerText)` expose the same label-prefix handling used internally by `setCaptionParagraph`.
 - `buildLabelClassLookup(options)` returns the label-class candidates used by integrators that patch generated caption label text later.
 - The returned state is a shared cache object. Treat it as read-only; if you need to modify it, clone it first.
 
-If you call `setCaptionParagraph` directly (outside `md.use(mditPCaption, options)`), pass `markRegState` in your options when you use non-default languages:
+If you call the paragraph helpers directly (outside `md.use(mditPCaption, options)`), pass `languages` or a prebuilt `markRegState` when you use non-default languages. Reusing a prebuilt state avoids repeated caller-side setup:
 
 ```js
 const opt = {
@@ -79,17 +83,29 @@ const opt = {
 };
 ```
 
-`setCaptionParagraph` mutates the token stream and returns a boolean: `true` when it detected and transformed a caption paragraph, otherwise `false`. Direct callers may pass partial options; missing fields use the same defaults as the plugin setup path. Treat the options object as immutable after the first helper call; create a new options object if you need different settings.
+`setCaptionParagraph` remains the compatibility wrapper around analyze + apply. It mutates the token stream and returns a boolean: `true` when it detected and transformed a caption paragraph, otherwise `false`. Direct callers may pass partial options; missing fields use the same defaults as the plugin setup path. Treat the options object as immutable after the first helper call; create a new options object if you need different settings.
 
-When `sp` is provided to `setCaptionParagraph`, the helper writes:
+When `context` is provided to `applyCaptionParagraph`, or `sp` is provided to `setCaptionParagraph`, the helper stores the full decision object as `captionDecision`:
 
 ```js
-sp.captionDecision = {
+context.captionDecision = {
+  paragraphIndex,
+  inlineIndex,
   mark,              // normalized mark key (e.g., 'img', 'table', 'video')
+  kind,              // 'caption' or 'label-only'
+  matchedText,
   labelText,         // detected label word without number/joint
-  hasExplicitNumber, // true when the original label included a number
+  number,            // original string, including forms such as '01' or 'A.5'
+  joint,
+  bodyText,
+  hasExplicitNumber, // true only when the source label included a number
+  prefixMarker,
 };
 ```
+
+Pass the frozen decision object returned by `analyzeCaptionParagraph` directly to `applyCaptionParagraph`; cloning it intentionally loses the private validation snapshot. Apply decisions before rebuilding or reindexing the block token array. Different paragraph decisions can be analyzed first and then applied because applying a caption only mutates that paragraph and its inline children.
+
+The optional analyzer `context` uses `{ captionName, isIframeTypeBlockquote, isVideoIframe }`. The apply `context` is also used for figure-class mirroring (`figureClassName`) and receives `captionDecision` after a successful mutation.
 
 Language files under `lang/*.json` may define `generatedLabelDefaults`. These are used by `getGeneratedLabelDefaults` and also exposed on `markRegState.generatedLabelDefaultsByLang`.
 
@@ -153,6 +169,21 @@ analyzeCaptionStart('Figure 1. A caption.', {
 //   hasExplicitNumber: true,
 //   prefixMarker: ''
 // }
+```
+
+Example paragraph analyze/apply usage:
+
+```js
+const context = {
+  captionName: 'img',
+  isIframeTypeBlockquote: false,
+  isVideoIframe: false,
+};
+const decision = analyzeCaptionParagraph(paragraphIndex, state, context, opt);
+
+if (decision) {
+  applyCaptionParagraph(decision, state, context, figureNumberState, opt);
+}
 ```
 
 ## Caption detection rules
@@ -232,7 +263,7 @@ Note: paragraphs immediately following `list_item_open` are intentionally exclud
 | `languages` | Restrict caption-label detection to selected languages in `lang/*.json`. |
 | `classPrefix` | Prefix for paragraph/label/body class names (default: `caption`). |
 | `dquoteFilename` / `strongFilename` | Extract filename token right after a caption label. |
-| `bLabel` / `strongLabel` | Use `b`/`strong` tag for the label wrapper instead of `span`. |
+| `bLabel` / `strongLabel` | Use `b`/`strong` tag for the label wrapper instead of `span`; `strongLabel` wins if both are true. |
 | `labelPrefixMarker` | Allow one/two marker strings before labels (stripped on match). |
 | `hasNumClass` | Add `label-has-num` when label includes a number. |
 | `jointSpaceUseHalfWidth` | Convert full-width joint-space labels to half-width body spacing. |

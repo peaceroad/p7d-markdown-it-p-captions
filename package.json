@@ -13,7 +13,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node test/test.js"
+    "test": "node test/test.js",
+    "benchmark": "node test/benchmark.js"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,6 @@
     "url": "https://github.com/peaceroad/p7d-markdown-it-p-captions/issues"
   },
   "devDependencies": {
-    "markdown-it": "^14.1.0"
+    "markdown-it": "^14.3.0"
   }
 }

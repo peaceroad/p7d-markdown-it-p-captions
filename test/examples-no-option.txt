@@ -169,7 +169,7 @@ Figure 1. a cat.
 [Markdown]
 図　
 [HTML]
-<p>図</p>
+<p class="caption-img"><span class="caption-img-label">図<span class="caption-img-label-joint">　</span></span></p>
 
 
 [Markdown]

@@ -12,6 +12,11 @@ const labelGroupName = 'pcaptionLabel'
 const numberPrimaryGroupName = 'pcaptionNumPrimary'
 const numberSecondaryGroupName = 'pcaptionNumSecondary'
 
+// markdown-it 14.2+ preserves Unicode spaces at paragraph boundaries via
+// asciiTrim(), so a label-only caption ending in U+3000 (for example `図　`)
+// reaches this plugin. markdown-it <=14.1 trims that character before the
+// inline token is created, so the same source cannot be detected there.
+
 const markAfterSpacedLayout = '(?:' +
   ' *(?:' +
     jointHalfWidth + '(?:(?=[ ]+)|$)|' +
@@ -308,6 +313,7 @@ const defaultMarkRegState = createMarkRegState(allLangs)
 const markRegCache = new Map()
 const normalizedOptionKey = Symbol('pCaptionNormalizedOption')
 const normalizedSetCaptionOptCache = new WeakMap()
+const captionDecisionSnapshotCache = new WeakMap()
 const installedKey = Symbol.for('p7d-markdown-it-p-captions.installed')
 
 const resolveMarkRegState = (languages) => {
@@ -476,7 +482,7 @@ const detectFallbackLanguageForText = (text, markRegState, mark, preferredLangua
   if (candidateLanguages.length === 1) return candidateLanguages[0]
   const allowJapanese = candidateLanguages.indexOf('ja') !== -1
   if (!allowJapanese) return candidateLanguages[0]
-  const target = (text || '').trim()
+  const target = typeof text === 'string' ? text.trim() : ''
   if (!target) return candidateLanguages[0]
   for (let i = 0; i < target.length; i++) {
     const char = target[i]
@@ -813,6 +819,11 @@ const buildStaticClassTables = (opt) => {
   opt.captionClassByMark = captionClassByMark
 }
 
+// Direct helper calls with no options should use the same precomputed tables as
+// plugin-installed calls rather than rebuilding class names on every caption.
+buildStaticClassTables(defaultSetCaptionOpt)
+defaultSetCaptionOpt[normalizedOptionKey] = true
+
 const buildCaptionClassNames = (mark, suffix, sp, opt) => {
   if (!opt.labelClassFollowsFigure) {
     const staticClasses = opt.captionClassByMark && opt.captionClassByMark[mark]
@@ -866,6 +877,7 @@ const mditPCaption = (md, option) => {
     }
     const len = state.tokens.length
     for (let n = 0; n < len - 1; n++) {
+      if (state.tokens[n].type !== 'paragraph_open') continue
       // Core plugin does not track caption/sp state, but helper keeps these args
       // for downstream integrations such as p7d-markdown-it-figure-with-p-caption.
       setCaptionParagraph(n, state, null, fNum, null, opt)
@@ -873,27 +885,26 @@ const mditPCaption = (md, option) => {
   })
 }
 
-const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
-  opt = resolveSetCaptionOpt(opt)
-  if (!state || !state.tokens || typeof n !== 'number' || n < 0) return false
+const analyzeCaptionParagraphWithOpt = (
+  n,
+  state,
+  captionName,
+  spIsIframeTypeBlockquote,
+  spIsVideoIframe,
+  opt,
+) => {
+  if (!state || !state.tokens || !Number.isInteger(n) || n < 0) return null
   const tokens = state.tokens
-  if (n >= tokens.length) return false
-  if (!fNum || typeof fNum !== 'object') {
-    fNum = { img: 0, table: 0 }
-  }
+  if (n >= tokens.length) return null
   const token = tokens[n]
-  if (!token) return false
-  if (token.type !== 'paragraph_open') return false
-  if (n > 1 && tokens[n-1].type === 'list_item_open') return false
+  if (!token || token.type !== 'paragraph_open') return null
+  if (n > 0 && tokens[n-1].type === 'list_item_open') return null
   const nextToken = tokens[n+1]
-  if (!nextToken || nextToken.type !== 'inline') return false
-  if (!nextToken.children || nextToken.children.length === 0 || !nextToken.children[0]) return false
+  if (!nextToken || nextToken.type !== 'inline') return null
+  if (!nextToken.children || nextToken.children.length === 0 || !nextToken.children[0]) return null
+  const firstChild = nextToken.children[0]
+  if (typeof firstChild.content !== 'string') return null
   const content = typeof nextToken.content === 'string' ? nextToken.content : ''
-
-  // caption/sp may be provided by integrators to enforce cross-block constraints
-  const captionName = caption && caption.name ? caption.name : ''
-  const spIsIframeTypeBlockquote = sp && sp.isIframeTypeBlockquote
-  const spIsVideoIframe = sp && sp.isVideoIframe
 
   const analysis = analyzeCaptionStart(content, {
     markRegState: getMarkRegStateFromOpt(opt),
@@ -903,30 +914,98 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
     labelPrefixMarkerReg: opt.labelPrefixMarkerReg,
     labelPrefixMarkerNeedsCheckOnLikelyStart: opt.labelPrefixMarkerNeedsCheckOnLikelyStart,
   })
-  if (!analysis) return false
+  if (!analysis) return null
+  const expectedLeadingText = analysis.prefixMarker + analysis.matchedText
+  if (!firstChild.content.startsWith(expectedLeadingText)) return null
 
-  if (analysis.prefixMarker) {
-    stripLabelPrefixMarker(nextToken, analysis.prefixMarker)
+  analysis.paragraphIndex = n
+  analysis.inlineIndex = n + 1
+  return analysis
+}
+
+const storeCaptionDecisionSnapshot = (decision, state) => {
+  const tokens = state.tokens
+  const paragraphToken = tokens[decision.paragraphIndex]
+  const inlineToken = tokens[decision.inlineIndex]
+  const childSnapshots = new Array(inlineToken.children.length)
+  for (let index = 0; index < inlineToken.children.length; index++) {
+    const child = inlineToken.children[index]
+    childSnapshots[index] = [child, child.type, child.content]
+  }
+  Object.freeze(decision)
+  captionDecisionSnapshotCache.set(decision, {
+    tokens,
+    paragraphToken,
+    inlineToken,
+    inlineContent: inlineToken.content,
+    children: inlineToken.children,
+    childSnapshots,
+  })
+  return decision
+}
+
+const analyzeCaptionParagraph = (n, state, context = null, opt) => {
+  const normalizedOpt = resolveSetCaptionOpt(opt)
+  const decision = analyzeCaptionParagraphWithOpt(
+    n,
+    state,
+    context && context.captionName ? context.captionName : '',
+    !!(context && context.isIframeTypeBlockquote),
+    !!(context && context.isVideoIframe),
+    normalizedOpt,
+  )
+  return decision ? storeCaptionDecisionSnapshot(decision, state) : null
+}
+
+const isCaptionDecisionCurrent = (decision, state) => {
+  if (!decision || !state || !state.tokens) return false
+  const snapshot = captionDecisionSnapshotCache.get(decision)
+  if (!snapshot || state.tokens !== snapshot.tokens) return false
+  const token = state.tokens[decision.paragraphIndex]
+  const nextToken = state.tokens[decision.inlineIndex]
+  if (token !== snapshot.paragraphToken || token.type !== 'paragraph_open') return false
+  if (nextToken !== snapshot.inlineToken || nextToken.type !== 'inline') return false
+  if (nextToken.content !== snapshot.inlineContent || nextToken.children !== snapshot.children) return false
+  if (nextToken.children.length !== snapshot.childSnapshots.length) return false
+  for (let index = 0; index < snapshot.childSnapshots.length; index++) {
+    const childSnapshot = snapshot.childSnapshots[index]
+    const child = nextToken.children[index]
+    if (child !== childSnapshot[0]) return false
+    if (child.type !== childSnapshot[1] || child.content !== childSnapshot[2]) return false
+  }
+  return true
+}
+
+const applyCaptionParagraphWithOpt = (decision, state, context, fNum, opt) => {
+  if (!fNum || typeof fNum !== 'object') {
+    fNum = { img: 0, table: 0 }
+  }
+  const token = state.tokens[decision.paragraphIndex]
+  const nextToken = state.tokens[decision.inlineIndex]
+
+  if (decision.prefixMarker) {
+    stripLabelPrefixMarker(nextToken, decision.prefixMarker)
   }
 
   const actualLabel = {
-    content: analysis.matchedText,
-    mark: analysis.labelText,
-    num: analysis.number,
-    joint: analysis.joint,
+    content: decision.matchedText,
+    mark: decision.labelText,
+    num: decision.number,
+    joint: decision.joint,
   }
 
-  const paragraphClass = opt.paragraphClassByMark && opt.paragraphClassByMark[analysis.mark]
-  token.attrJoin('class', paragraphClass || buildParagraphClassName(analysis.mark, opt))
+  const paragraphClass = opt.paragraphClassByMark && opt.paragraphClassByMark[decision.mark]
+  token.attrJoin('class', paragraphClass || buildParagraphClassName(decision.mark, opt))
 
-  if (opt.setFigureNumber && (analysis.mark === 'img' || analysis.mark === 'table')) {
+  if (opt.setFigureNumber && (decision.mark === 'img' || decision.mark === 'table')) {
     if (actualLabel.num === '') {
       actualLabel.num = undefined
     }
     if (actualLabel.num === undefined) {
-      setFigureNumber(n, state, analysis.mark, actualLabel, fNum)
-    } else if (actualLabel.num > 0) {
-      fNum[analysis.mark] = actualLabel.num
+      setFigureNumber(decision.paragraphIndex, state, decision.mark, actualLabel, fNum)
+    } else {
+      const explicitCounterValue = getPositiveIntegerLabelNumber(actualLabel.num)
+      if (explicitCounterValue > 0) fNum[decision.mark] = explicitCounterValue
     }
   }
 
@@ -935,13 +1014,48 @@ const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
     actualLabel.joint = ''
     convertJointSpaceFullWith = true
   }
-  return addLabelToken(state, nextToken, analysis.mark, actualLabel, convertJointSpaceFullWith, opt, sp)
+  addLabelToken(state, nextToken, decision.mark, actualLabel, convertJointSpaceFullWith, opt, context)
+  if (context && typeof context === 'object') {
+    context.captionDecision = decision
+  }
+  return true
+}
+
+const applyCaptionParagraph = (decision, state, context, fNum, opt) => {
+  if (!isCaptionDecisionCurrent(decision, state)) return false
+  return applyCaptionParagraphWithOpt(decision, state, context, fNum, resolveSetCaptionOpt(opt))
+}
+
+const setCaptionParagraph = (n, state, caption, fNum, sp, opt) => {
+  opt = resolveSetCaptionOpt(opt)
+  // caption/sp may be provided by integrators to enforce cross-block constraints.
+  const decision = analyzeCaptionParagraphWithOpt(
+    n,
+    state,
+    caption && caption.name ? caption.name : '',
+    !!(sp && sp.isIframeTypeBlockquote),
+    !!(sp && sp.isVideoIframe),
+    opt,
+  )
+  if (!decision) return false
+  return applyCaptionParagraphWithOpt(decision, state, sp, fNum, opt)
 }
 
 const replaceLeadingText = (text, mark, replacement) => {
   if (typeof text !== 'string' || !text || !mark) return text
   if (text.startsWith(mark)) return replacement + text.slice(mark.length)
   return text
+}
+
+const getPositiveIntegerLabelNumber = (text) => {
+  if (typeof text !== 'string' || !text) return 0
+  let value = 0
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index)
+    if (code < 0x30 || code > 0x39) return 0
+    value = value * 10 + code - 0x30
+  }
+  return value
 }
 
 const setFigureNumber = (n, state, mark, actualLabel, fNum) => {
@@ -955,7 +1069,6 @@ const setFigureNumber = (n, state, mark, actualLabel, fNum) => {
     nextToken.children[0].content = replaceLeadingText(nextToken.children[0].content, actualLabel.mark, replacedCont)
   }
   actualLabel.content = replaceLeadingText(actualLabel.content, actualLabel.mark, replacedCont)
-  return
 }
 
 const setFilename = (state, nextToken, mark, opt) => {
@@ -976,7 +1089,6 @@ const setFilename = (state, nextToken, mark, opt) => {
   const filenameTokenClose = new state.Token('strong_close', 'strong', -1)
 
   nextToken.children.splice(0, 0, beforeFilenameToken, filenameTokenOpen, filenameTokenContent, filenameTokenClose)
-  return
 }
 
 const shouldRenderUnnumberedLabel = (mark, opt) => {
@@ -987,32 +1099,8 @@ const shouldRenderUnnumberedLabel = (mark, opt) => {
 
 const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFullWith, opt, sp) => {
   const children = nextToken.children
-  let labelTag = 'span'
-  if (opt.bLabel) labelTag = 'b'
-  if (opt.strongLabel) labelTag = 'strong'
-
-  const labelToken = {
-    first: new state.Token('text', '', 0),
-    open: new state.Token(labelTag + '_open', labelTag, 1),
-    content: new state.Token('text', '', 0),
-    close: new state.Token(labelTag + '_close', labelTag, -1),
-  }
-  let labelMeta = null
-
-  const labelClassName = buildCaptionClassNames(mark, 'label', sp, opt)
-  if (labelClassName) {
-    labelToken.open.attrSet('class', labelClassName)
-  }
-  if (opt.hasNumClass && actualLabel.num) {
-    labelToken.open.attrJoin('class', 'label-has-num')
-  }
-
   const firstContent = children[0].content
-  if (firstContent.startsWith(actualLabel.content)) {
-    children[0].content = firstContent.slice(actualLabel.content.length)
-  } else {
-    children[0].content = firstContent.replace(actualLabel.content, '')
-  }
+  children[0].content = firstContent.slice(actualLabel.content.length)
   if (convertJointSpaceFullWith) {
     if (actualLabel.content.endsWith('　')) {
       actualLabel.content = actualLabel.content.slice(0, -1)
@@ -1023,45 +1111,49 @@ const addLabelToken = (state, nextToken, mark, actualLabel, convertJointSpaceFul
       children[0].content = ' ' + children[0].content
     }
   }
-  labelToken.content.content = actualLabel.content
-  if (opt.strongFilename) {
-    if (children.length > 4) {
-      if(children[1].type === 'strong_open'
-        && children[3].type === 'strong_close'
-        && /^(?:[ 　]|$)/.test(children[4].content)) {
-        children[1].attrJoin('class', buildParagraphClassName(mark + '-filename', opt))
-      }
-    }
+  if (opt.strongFilename &&
+      children.length > 4 &&
+      children[1].type === 'strong_open' &&
+      children[3].type === 'strong_close' &&
+      typeof children[4].content === 'string' &&
+      /^(?:[ 　]|$)/.test(children[4].content)) {
+    children[1].attrJoin('class', buildParagraphClassName(mark + '-filename', opt))
   }
 
   if (opt.dquoteFilename) {
     setFilename(state, nextToken, mark, opt)
   }
 
+  let bodyStartIndex = 0
   if (actualLabel.num || shouldRenderUnnumberedLabel(mark, opt)) {
-    labelMeta = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
+    const labelTag = opt.strongLabel ? 'strong' : opt.bLabel ? 'b' : 'span'
+    const labelToken = {
+      first: new state.Token('text', '', 0),
+      open: new state.Token(labelTag + '_open', labelTag, 1),
+      content: new state.Token('text', '', 0),
+      close: new state.Token(labelTag + '_close', labelTag, -1),
+    }
+    labelToken.content.content = actualLabel.content
+    const labelClassName = buildCaptionClassNames(mark, 'label', sp, opt)
+    if (labelClassName) {
+      labelToken.open.attrSet('class', labelClassName)
+    }
+    if (opt.hasNumClass && actualLabel.num) {
+      labelToken.open.attrJoin('class', 'label-has-num')
+    }
+    bodyStartIndex = addJointToken(state, nextToken, mark, labelToken, actualLabel.joint, opt, sp)
   } else {
     children[0].content = trimAsciiSpacesStart(children[0].content)
   }
   if (opt.wrapCaptionBody) {
-    wrapCaptionBody(state, nextToken, mark, labelMeta, opt, sp)
+    wrapCaptionBody(state, nextToken, mark, bodyStartIndex, opt, sp)
   }
-  if (sp) {
-    const hasExplicitNumber = actualLabel.num !== undefined && actualLabel.num !== ''
-    sp.captionDecision = {
-      mark,
-      labelText: actualLabel.mark || '',
-      hasExplicitNumber,
-    }
-  }
-  return true
 }
 
 const addJointToken = (state, nextToken, mark, labelToken, actualLabelJoint, opt, sp) => {
-  nextToken.children.splice(0, 0, labelToken.first, labelToken.open, labelToken.content, labelToken.close)
-  let bodyStartIndex = 4
+  const labelTokens = [labelToken.first, labelToken.open, labelToken.content]
   if (actualLabelJoint) {
-    nextToken.children[2].content = stripTrailingJointAndSpaces(nextToken.children[2].content, actualLabelJoint)
+    labelToken.content.content = stripTrailingJointAndSpaces(labelToken.content.content, actualLabelJoint)
 
     const labelJointToken = {
       open: new state.Token('span_open', 'span', 1),
@@ -1073,28 +1165,24 @@ const addJointToken = (state, nextToken, mark, labelToken, actualLabelJoint, opt
       labelJointToken.open.attrSet('class', jointClassName)
     }
     labelJointToken.content.content = actualLabelJoint
-
-    nextToken.children.splice(3, 0, labelJointToken.open, labelJointToken.content, labelJointToken.close)
-    bodyStartIndex = 7
+    labelTokens.push(labelJointToken.open, labelJointToken.content, labelJointToken.close)
   }
-  return { bodyStartIndex }
+  labelTokens.push(labelToken.close)
+  nextToken.children.splice(0, 0, ...labelTokens)
+  return labelTokens.length
 }
 
-const wrapCaptionBody = (state, nextToken, mark, labelMeta, opt, sp) => {
+const wrapCaptionBody = (state, nextToken, mark, bodyStartIndex, opt, sp) => {
   const children = nextToken.children
-  let startIndex = 0
-  if (labelMeta && typeof labelMeta.bodyStartIndex === 'number') {
-    startIndex = labelMeta.bodyStartIndex
-  }
+  let startIndex = bodyStartIndex
   while (startIndex < children.length &&
     children[startIndex].type === 'text' &&
     children[startIndex].content === '') {
     startIndex++
   }
   if (startIndex >= children.length) return
+  const removeCount = children.length - startIndex
   const bodyTokens = children.slice(startIndex)
-  if (!bodyTokens.length) return
-  children.splice(startIndex)
 
   const preserveLeadingWhitespace = startIndex > 0
   let leadingSpaceToken = null
@@ -1114,7 +1202,9 @@ const wrapCaptionBody = (state, nextToken, mark, labelMeta, opt, sp) => {
 
   if (!bodyTokens.length) {
     if (leadingSpaceToken) {
-      children.splice(startIndex, 0, leadingSpaceToken)
+      children.splice(startIndex, removeCount, leadingSpaceToken)
+    } else {
+      children.splice(startIndex, removeCount)
     }
     return
   }
@@ -1130,12 +1220,14 @@ const wrapCaptionBody = (state, nextToken, mark, labelMeta, opt, sp) => {
     insertTokens.push(leadingSpaceToken)
   }
   insertTokens.push(bodyOpen, ...bodyTokens, bodyClose)
-  children.splice(startIndex, 0, ...insertTokens)
+  children.splice(startIndex, removeCount, ...insertTokens)
 }
 
 export default mditPCaption
 export {
+  analyzeCaptionParagraph,
   analyzeCaptionStart,
+  applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
   normalizeLabelPrefixMarkers,

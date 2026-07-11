@@ -6,7 +6,9 @@ import Token from 'markdown-it/lib/token.mjs'
 import { fileURLToPath } from 'url'
 
 import mditPCaption, {
+  analyzeCaptionParagraph,
   analyzeCaptionStart,
+  applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
   getGeneratedLabelDefaults,
@@ -200,6 +202,18 @@ const runPluginOptionNormalizationTests = () => {
     'Figure. A caption.',
     '<p class="img"><span class="label">Figure<span class="label-joint">.</span></span> <span class="body">A caption.</span></p>\n',
   )
+  assertRender(
+    'strongLabel takes precedence over bLabel',
+    mdit().use(mditPCaption, { bLabel: true, strongLabel: true }),
+    'Figure. A caption.',
+    '<p class="caption-img"><strong class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></strong> A caption.</p>\n',
+  )
+  assertRender(
+    'unsupported languages stay disabled',
+    mdit().use(mditPCaption, { languages: ['fr'] }),
+    'Figure. A caption.',
+    '<p>Figure. A caption.</p>\n',
+  )
 
   return ok
 }
@@ -282,19 +296,55 @@ const runSetCaptionParagraphTests = () => {
     'captionDecision unnumbered',
     'Figure. A cat.\n',
     null,
-    { mark: 'img', labelText: 'Figure', hasExplicitNumber: false },
+    {
+      paragraphIndex: 0,
+      inlineIndex: 1,
+      mark: 'img',
+      kind: 'caption',
+      matchedText: 'Figure.',
+      labelText: 'Figure',
+      number: '',
+      joint: '.',
+      bodyText: 'A cat.',
+      hasExplicitNumber: false,
+      prefixMarker: '',
+    },
   )
   runDecisionCase(
     'captionDecision numbered',
     'Figure 2. A cat.\n',
     null,
-    { mark: 'img', labelText: 'Figure', hasExplicitNumber: true },
+    {
+      paragraphIndex: 0,
+      inlineIndex: 1,
+      mark: 'img',
+      kind: 'caption',
+      matchedText: 'Figure 2.',
+      labelText: 'Figure',
+      number: '2',
+      joint: '.',
+      bodyText: 'A cat.',
+      hasExplicitNumber: true,
+      prefixMarker: '',
+    },
   )
   runDecisionCase(
     'captionDecision preserved when label removed',
     'Figure. A cat.\n',
     { removeUnnumberedLabel: true },
-    { mark: 'img', labelText: 'Figure', hasExplicitNumber: false },
+    {
+      paragraphIndex: 0,
+      inlineIndex: 1,
+      mark: 'img',
+      kind: 'caption',
+      matchedText: 'Figure.',
+      labelText: 'Figure',
+      number: '',
+      joint: '.',
+      bodyText: 'A cat.',
+      hasExplicitNumber: false,
+      prefixMarker: '',
+    },
   )
 
   try {
@@ -346,6 +396,26 @@ const runSetCaptionParagraphTests = () => {
   }
 
   try {
+    const state = createStateForMarkdown('Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const sp = { figureClassName: 'figure-img' }
+    const result = setCaptionParagraph(paragraphIndex, state, null, null, sp, {
+      figureToLabelClassMap: { 'figure-img': 'media-figure' },
+      labelClassFollowsFigure: false,
+      wrapCaptionBody: true,
+    })
+    const actual = parserForState.renderer.render(state.tokens, parserForState.options, {})
+    assert.strictEqual(result, true)
+    assert.strictEqual(
+      actual,
+      '<p class="caption-img"><span class="caption-img-label">Figure<span class="caption-img-label-joint">.</span></span> <span class="caption-img-body">A cat.</span></p>\n',
+    )
+  } catch (err) {
+    ok = false
+    console.log('setCaptionParagraph test "explicit figure class mirroring opt-out" failed.')
+  }
+
+  try {
     const baseOpt = {
       classPrefix: 'f',
       markRegState: getMarkRegStateForLanguages(['en']),
@@ -372,6 +442,168 @@ const runSetCaptionParagraphTests = () => {
 }
 
 pass = runSetCaptionParagraphTests() && pass
+
+const runCaptionParagraphPlannerTests = () => {
+  let ok = true
+  const assertPureDecision = (markdown, context, opt, expected) => {
+    const state = createStateForMarkdown(markdown)
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const before = JSON.stringify(state.tokens)
+    const decision = analyzeCaptionParagraph(paragraphIndex, state, context, opt)
+    assert.strictEqual(JSON.stringify(state.tokens), before)
+    assert.deepStrictEqual(decision, expected)
+    return { state, decision }
+  }
+
+  try {
+    const plannerOpt = Object.freeze({ languages: Object.freeze(['en']) })
+    const context = Object.freeze({ captionName: 'img' })
+    const { state, decision } = assertPureDecision(
+      'Figure A.5. A cat.\n',
+      context,
+      plannerOpt,
+      {
+        paragraphIndex: 0,
+        inlineIndex: 1,
+        mark: 'img',
+        kind: 'caption',
+        matchedText: 'Figure A.5.',
+        labelText: 'Figure',
+        number: 'A.5',
+        joint: '.',
+        bodyText: 'A cat.',
+        hasExplicitNumber: true,
+        prefixMarker: '',
+      },
+    )
+    assert.strictEqual(Object.isFrozen(decision), true)
+    assert.strictEqual(applyCaptionParagraph({ ...decision }, state, {}, null, plannerOpt), false)
+    const applyContext = {}
+    assert.strictEqual(applyCaptionParagraph(decision, state, applyContext, null, plannerOpt), true)
+    assert.deepStrictEqual(applyContext.captionDecision, decision)
+    assert.strictEqual(
+      parserForState.renderer.render(state.tokens, parserForState.options, {}),
+      '<p class="caption-img"><span class="caption-img-label">Figure A.5<span class="caption-img-label-joint">.</span></span> A cat.</p>\n',
+    )
+    assert.strictEqual(applyCaptionParagraph(decision, state, applyContext, null, plannerOpt), false)
+  } catch (err) {
+    ok = false
+    console.log('caption paragraph planner test "pure analyze/apply" failed.')
+    console.log(err)
+  }
+
+  try {
+    const state = createStateForMarkdown('Figure. **A cat.**\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const decision = analyzeCaptionParagraph(paragraphIndex, state)
+    const inlineToken = state.tokens[decision.inlineIndex]
+    inlineToken.children[2].content = 'Changed.'
+    assert.strictEqual(applyCaptionParagraph(decision, state), false)
+    assert.strictEqual(state.tokens[paragraphIndex].attrGet('class'), null)
+  } catch (err) {
+    ok = false
+    console.log('caption paragraph planner test "stale child decision" failed.')
+    console.log(err)
+  }
+
+  try {
+    const state = createStateForMarkdown('▼ Figure 01. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const plannerOpt = Object.freeze({
+      languages: Object.freeze(['en']),
+      labelPrefixMarker: '▼',
+    })
+    const decision = analyzeCaptionParagraph(paragraphIndex, state, null, plannerOpt)
+    assert.strictEqual(decision.number, '01')
+    assert.strictEqual(decision.prefixMarker, '▼ ')
+    assert.strictEqual(state.tokens[decision.inlineIndex].content, '▼ Figure 01. A cat.')
+    assert.strictEqual(applyCaptionParagraph(decision, state, null, null, plannerOpt), true)
+    assert.strictEqual(state.tokens[decision.inlineIndex].content, 'Figure 01. A cat.')
+  } catch (err) {
+    ok = false
+    console.log('caption paragraph planner test "prefix marker" failed.')
+    console.log(err)
+  }
+
+  try {
+    const state = createStateForMarkdown('Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const decision = analyzeCaptionParagraph(paragraphIndex, state)
+    state.tokens[decision.inlineIndex].content = 'Changed.'
+    assert.strictEqual(applyCaptionParagraph(decision, state), false)
+    assert.strictEqual(state.tokens[paragraphIndex].attrGet('class'), null)
+  } catch (err) {
+    ok = false
+    console.log('caption paragraph planner test "stale decision" failed.')
+    console.log(err)
+  }
+
+  try {
+    const listState = createStateForMarkdown('- Figure. A cat.\n')
+    const listParagraphIndex = listState.tokens.findIndex(token => token.type === 'paragraph_open')
+    assert.strictEqual(analyzeCaptionParagraph(listParagraphIndex, listState), null)
+
+    const videoState = createStateForMarkdown('Video. Clip.\n')
+    const videoParagraphIndex = videoState.tokens.findIndex(token => token.type === 'paragraph_open')
+    assert.strictEqual(
+      analyzeCaptionParagraph(videoParagraphIndex, videoState, {
+        captionName: 'iframe',
+        isVideoIframe: true,
+      }).mark,
+      'video',
+    )
+    const mismatchState = createStateForMarkdown('Figure. A cat.\n')
+    const mismatchParagraphIndex = mismatchState.tokens.findIndex(token => token.type === 'paragraph_open')
+    assert.strictEqual(
+      analyzeCaptionParagraph(mismatchParagraphIndex, mismatchState, {
+        captionName: 'img',
+        isVideoIframe: true,
+      }),
+      null,
+    )
+  } catch (err) {
+    ok = false
+    console.log('caption paragraph planner test "guards" failed.')
+    console.log(err)
+  }
+
+  try {
+    const state = createStateForMarkdown('Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const decision = analyzeCaptionParagraph(paragraphIndex, state)
+    const context = {}
+    assert.strictEqual(
+      applyCaptionParagraph(decision, state, context, { img: 0, table: 0 }, { setFigureNumber: true }),
+      true,
+    )
+    assert.strictEqual(context.captionDecision.number, '')
+    assert.strictEqual(context.captionDecision.hasExplicitNumber, false)
+    assert.match(state.tokens[decision.inlineIndex].content, /^Figure 1\./)
+  } catch (err) {
+    ok = false
+    console.log('caption paragraph planner test "generated number decision" failed.')
+    console.log(err)
+  }
+
+  try {
+    const actual = mdit().use(mditPCaption, { setFigureNumber: true }).render(
+      'Figure 1.2. First.\n\nFigure. Second.',
+    )
+    assert.strictEqual(
+      actual,
+      '<p class="caption-img"><span class="caption-img-label">Figure 1.2<span class="caption-img-label-joint">.</span></span> First.</p>\n' +
+      '<p class="caption-img"><span class="caption-img-label">Figure 1<span class="caption-img-label-joint">.</span></span> Second.</p>\n',
+    )
+  } catch (err) {
+    ok = false
+    console.log('caption paragraph planner test "composite number counter" failed.')
+    console.log(err)
+  }
+
+  return ok
+}
+
+pass = runCaptionParagraphPlannerTests() && pass
 
 const runHelperExportTests = () => {
   let ok = true
@@ -421,6 +653,7 @@ const runHelperExportTests = () => {
     assert.strictEqual(getFallbackLabelForText('table', '表です。', stateA), '表')
     assert.strictEqual(getFallbackLabelForText('img', 'A cat.', getMarkRegStateForLanguages(['ja'])), '図')
     assert.strictEqual(getFallbackLabelForText('img', '猫です。', getMarkRegStateForLanguages(['en'])), 'Figure')
+    assert.strictEqual(getFallbackLabelForText('img', 123, stateA), '図')
 
     const unsupportedState = getMarkRegStateForLanguages(['fr', 'de'])
     assert.deepStrictEqual(unsupportedState.languages, [])
@@ -558,6 +791,20 @@ const runHelperExportTests = () => {
       },
     )
     assert.strictEqual(analyzeCaptionStart('Plain text', { markRegState: state, preferredMark: 'img' }), null)
+    assert.deepStrictEqual(
+      analyzeCaptionStart('図　', { markRegState: state, preferredMark: 'img' }),
+      {
+        mark: 'img',
+        kind: 'label-only',
+        matchedText: '図　',
+        labelText: '図',
+        number: '',
+        joint: '　',
+        bodyText: '',
+        hasExplicitNumber: false,
+        prefixMarker: '',
+      },
+    )
   } catch (err) {
     ok = false
     console.log('helper export test "analyzeCaptionStart" failed.')
@@ -569,4 +816,8 @@ const runHelperExportTests = () => {
 
 pass = runHelperExportTests() && pass
 
-if (pass) console.log('Passed all test.')
+if (pass) {
+  console.log('Passed all test.')
+} else {
+  process.exitCode = 1
+}
