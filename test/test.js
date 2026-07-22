@@ -11,10 +11,13 @@ import mditPCaption, {
   applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
+  createCaptionNumberingPolicy,
+  createCaptionNumberingRuntime,
   getGeneratedLabelDefaults,
   getFallbackLabelForText,
   getMarkRegForLanguages,
   getMarkRegStateForLanguages,
+  isCaptionLabelBoundary,
   normalizeLabelPrefixMarkers,
   setCaptionParagraph,
   stripLabelPrefixMarker,
@@ -604,6 +607,285 @@ const runCaptionParagraphPlannerTests = () => {
 }
 
 pass = runCaptionParagraphPlannerTests() && pass
+
+const runCaptionNumberingPolicyTests = () => {
+  let ok = true
+  const applyWithRuntime = (markdown, runtime, context = {}, opt = {}) => {
+    const state = createStateForMarkdown(markdown)
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const result = setCaptionParagraph(paragraphIndex, state, null, runtime, context, opt)
+    return {
+      result,
+      state,
+      context,
+      html: parserForState.renderer.render(state.tokens, parserForState.options, {}),
+    }
+  }
+
+  try {
+    const policy = createCaptionNumberingPolicy({
+      enabledMarks: ['img', 'table'],
+      explicitCounter: 'max',
+    })
+    assert.strictEqual(Object.isFrozen(policy), true)
+    assert.throws(() => createCaptionNumberingPolicy([]), TypeError)
+    assert.throws(() => createCaptionNumberingPolicy({ enabledMarks: 'img' }), TypeError)
+    assert.throws(() => createCaptionNumberingPolicy({ enabledMarks: ['video'] }), TypeError)
+    assert.throws(() => createCaptionNumberingPolicy({ explicitCounter: 'latest' }), TypeError)
+    assert.throws(() => createCaptionNumberingPolicy({ getSequenceKey: true }), TypeError)
+    assert.throws(() => createCaptionNumberingPolicy({ generatedNumberHasNumClass: 'yes' }), TypeError)
+    assert.throws(() => createCaptionNumberingRuntime({ ...policy }), TypeError)
+    assert.throws(() => createCaptionNumberingRuntime(policy, []), TypeError)
+    const runtime = createCaptionNumberingRuntime(policy, { env: {} })
+    assert.strictEqual(Object.isFrozen(runtime), true)
+    assert.match(applyWithRuntime('Figure. First.\n', runtime).html, /Figure 1/)
+    assert.match(applyWithRuntime('Figure 5. Manual.\n', runtime).html, /Figure 5/)
+    assert.match(applyWithRuntime('Figure 2. Lower.\n', runtime).html, /Figure 2/)
+    assert.match(applyWithRuntime('Figure. Next.\n', runtime).html, /Figure 6/)
+    assert.match(applyWithRuntime('Table. First.\n', runtime).html, /Table 1/)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "built-in counters" failed.')
+    console.log(err)
+  }
+
+  try {
+    let sequenceKeyCalls = 0
+    const policy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      explicitCounter: 'ignore',
+      getSequenceKey() {
+        sequenceKeyCalls++
+        return null
+      },
+      parseExplicitNumber() {
+        throw new Error('ignored explicit numbers must not be parsed')
+      },
+    })
+    const runtime = createCaptionNumberingRuntime(policy)
+    assert.match(applyWithRuntime('Figure 5. Manual.\n', runtime).html, /Figure 5/)
+    assert.strictEqual(sequenceKeyCalls, 0)
+    assert.match(applyWithRuntime('Figure. First automatic.\n', runtime).html, /Figure 1/)
+    assert.strictEqual(sequenceKeyCalls, 1)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "ignored explicit counters" failed.')
+    console.log(err)
+  }
+
+  try {
+    const policy = createCaptionNumberingPolicy({
+      enabledMarks: ['img', 'table'],
+      explicitCounter: 'max',
+      getSequenceKey({ captionContext }) {
+        return captionContext.numbering.sequenceKey
+      },
+      parseExplicitNumber({ number, captionContext }) {
+        const numbering = captionContext.numbering
+        if (!numbering.scoped) return /^[1-9][0-9]*$/.test(number) ? Number(number) : null
+        const prefix = numbering.displayPrefix + numbering.separator
+        if (!number.startsWith(prefix)) return null
+        const tail = number.slice(prefix.length)
+        return /^[1-9][0-9]*$/.test(tail) ? Number(tail) : null
+      },
+      formatGeneratedNumber({ sequence, captionContext }) {
+        const numbering = captionContext.numbering
+        return numbering.scoped
+          ? numbering.displayPrefix + numbering.separator + sequence
+          : String(sequence)
+      },
+    })
+    const runtime = createCaptionNumberingRuntime(policy)
+    const contextA = { numbering: { scoped: true, sequenceKey: 'appendix:A', displayPrefix: 'A', separator: '.' } }
+    const contextB = { numbering: { scoped: true, sequenceKey: 2, displayPrefix: 'B', separator: '-' } }
+    const unscoped = { numbering: { scoped: false, sequenceKey: null, displayPrefix: '', separator: '' } }
+    assert.match(applyWithRuntime('Figure. A1.\n', runtime, contextA).html, /Figure A\.1/)
+    assert.match(applyWithRuntime('Figure A.5. A5.\n', runtime, contextA).html, /Figure A\.5/)
+    assert.match(applyWithRuntime('Figure. A6.\n', runtime, contextA).html, /Figure A\.6/)
+    assert.match(applyWithRuntime('Figure. B1.\n', runtime, contextB).html, /Figure B-1/)
+    assert.match(applyWithRuntime('Figure. U1.\n', runtime, unscoped).html, /Figure 1/)
+    assert.match(applyWithRuntime('Table. TA1.\n', runtime, contextA).html, /Table A\.1/)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "keyed compound counters" failed.')
+    console.log(err)
+  }
+
+  try {
+    let failFormatter = true
+    const policy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      getSequenceKey: () => null,
+      formatGeneratedNumber({ sequence }) {
+        if (failFormatter) throw new Error('formatter failure')
+        return String(sequence)
+      },
+    })
+    const runtime = createCaptionNumberingRuntime(policy)
+    const state = createStateForMarkdown('▼ Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const before = JSON.stringify(state.tokens)
+    assert.throws(
+      () => setCaptionParagraph(paragraphIndex, state, null, runtime, {}, { labelPrefixMarker: '▼' }),
+      /formatter failure/,
+    )
+    assert.strictEqual(JSON.stringify(state.tokens), before)
+    failFormatter = false
+    assert.match(applyWithRuntime('Figure. Next.\n', runtime).html, /Figure 1/)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "callback transaction" failed.')
+    console.log(err)
+  }
+
+  try {
+    const invalidKeyValues = [undefined, {}, Promise.resolve('x'), { then() {} }, Infinity, 'x'.repeat(257)]
+    for (const invalidValue of invalidKeyValues) {
+      const policy = createCaptionNumberingPolicy({
+        enabledMarks: ['img'],
+        getSequenceKey: () => invalidValue,
+      })
+      const runtime = createCaptionNumberingRuntime(policy)
+      assert.throws(() => applyWithRuntime('Figure. Invalid.\n', runtime), Error)
+    }
+
+    const invalidParserValues = [0, -1, 1.5, Infinity, Number.MAX_SAFE_INTEGER + 1, '1', {}, Promise.resolve(1), { then() {} }]
+    for (const invalidValue of invalidParserValues) {
+      const policy = createCaptionNumberingPolicy({
+        enabledMarks: ['img'],
+        parseExplicitNumber: () => invalidValue,
+      })
+      const runtime = createCaptionNumberingRuntime(policy)
+      assert.throws(() => applyWithRuntime('Figure 1. Invalid.\n', runtime), TypeError)
+    }
+
+    const invalidFormatterValues = ['', 1, {}, Promise.resolve('1'), { then() {} }, '1000000']
+    for (const invalidValue of invalidFormatterValues) {
+      const policy = createCaptionNumberingPolicy({
+        enabledMarks: ['img'],
+        formatGeneratedNumber: () => invalidValue,
+      })
+      const runtime = createCaptionNumberingRuntime(policy)
+      assert.throws(() => applyWithRuntime('Figure. Invalid.\n', runtime), Error)
+    }
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "invalid callback results" failed.')
+    console.log(err)
+  }
+
+  try {
+    const policy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      explicitCounter: 'replace',
+      parseExplicitNumber({ number }) {
+        return number === '999999' ? 999999 : null
+      },
+      formatGeneratedNumber({ sequence }) {
+        return String(sequence)
+      },
+    })
+    const runtime = createCaptionNumberingRuntime(policy)
+    applyWithRuntime('Figure 999999. Limit.\n', runtime)
+    const overflowState = createStateForMarkdown('Figure. Overflow.\n')
+    const paragraphIndex = overflowState.tokens.findIndex(token => token.type === 'paragraph_open')
+    const before = JSON.stringify(overflowState.tokens)
+    assert.throws(
+      () => setCaptionParagraph(paragraphIndex, overflowState, null, runtime, {}, {}),
+      RangeError,
+    )
+    assert.strictEqual(JSON.stringify(overflowState.tokens), before)
+    assert.strictEqual(
+      mdit().use(mditPCaption, { setFigureNumber: true }).render('Figure 999999. Limit.\n\nFigure. Overflow.'),
+      '<p class="caption-img"><span class="caption-img-label">Figure 999999<span class="caption-img-label-joint">.</span></span> Limit.</p>\n' +
+      '<p class="caption-img"><span class="caption-img-label">Figure 1000000<span class="caption-img-label-joint">.</span></span> Overflow.</p>\n',
+    )
+
+    const defaultPolicy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      explicitCounter: 'replace',
+    })
+    const defaultRuntime = createCaptionNumberingRuntime(defaultPolicy)
+    applyWithRuntime('Figure 999999. Limit.\n', defaultRuntime)
+    const defaultOverflowState = createStateForMarkdown('Figure. Overflow.\n')
+    const defaultOverflowIndex = defaultOverflowState.tokens.findIndex(token => token.type === 'paragraph_open')
+    const defaultOverflowBefore = JSON.stringify(defaultOverflowState.tokens)
+    assert.throws(
+      () => setCaptionParagraph(defaultOverflowIndex, defaultOverflowState, null, defaultRuntime, {}, {}),
+      RangeError,
+    )
+    assert.strictEqual(JSON.stringify(defaultOverflowState.tokens), defaultOverflowBefore)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "strict and legacy overflow" failed.')
+    console.log(err)
+  }
+
+  try {
+    const policy = createCaptionNumberingPolicy({ enabledMarks: ['img'] })
+    const runtime = createCaptionNumberingRuntime(policy)
+    const state = createStateForMarkdown('Figure. Deferred.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const decision = analyzeCaptionParagraph(paragraphIndex, state)
+    state.tokens[decision.inlineIndex].content = 'Changed.'
+    assert.strictEqual(applyCaptionParagraph(decision, state, {}, runtime), false)
+    const context = {}
+    assert.match(applyWithRuntime('Figure. Fresh.\n', runtime, context).html, /Figure 1/)
+    assert.strictEqual(context.captionDecision.number, '')
+    assert.strictEqual(context.captionDecision.hasExplicitNumber, false)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "stale apply and source decision" failed.')
+    console.log(err)
+  }
+
+  return ok
+}
+
+pass = runCaptionNumberingPolicyTests() && pass
+
+const runCaptionBoundaryTests = () => {
+  let ok = true
+  try {
+    assert.strictEqual(isCaptionLabelBoundary('Chapter 1', 9, { layout: 'spaced', hasNumber: true }), true)
+    assert.strictEqual(isCaptionLabelBoundary('Chapter 1st', 9, { layout: 'spaced', hasNumber: true }), false)
+    assert.strictEqual(isCaptionLabelBoundary('Chapter 1: Introduction', 9, { layout: 'spaced', hasNumber: true }), true)
+    assert.strictEqual(isCaptionLabelBoundary('Chapter 1 Introduction', 9, { layout: 'spaced', hasNumber: true }), true)
+    assert.strictEqual(isCaptionLabelBoundary('Chapter 1 introduction', 9, { layout: 'spaced', hasNumber: true }), false)
+    assert.strictEqual(isCaptionLabelBoundary('第1章', 3, { layout: 'compact', hasNumber: true }), true)
+    assert.strictEqual(isCaptionLabelBoundary('第1章立て', 3, { layout: 'compact', hasNumber: true }), false)
+    assert.strictEqual(isCaptionLabelBoundary('第1章　はじめに', 3, { layout: 'compact', hasNumber: true }), true)
+    assert.strictEqual(isCaptionLabelBoundary('Figure.', 6, { layout: 'spaced', hasNumber: false }), true)
+    assert.strictEqual(isCaptionLabelBoundary('Figure', 6, { layout: 'spaced', hasNumber: false }), false)
+    assert.strictEqual(isCaptionLabelBoundary('図　', 1, { layout: 'compact', hasNumber: false }), true)
+    assert.throws(() => isCaptionLabelBoundary('x', 0, { layout: 'unknown' }), TypeError)
+
+    const state = getMarkRegStateForLanguages(['en', 'ja'])
+    const spacedTails = ['.', ': ', '　', ' X', ' x', 'st', '']
+    for (const tail of spacedTails) {
+      const source = 'Figure 1' + tail
+      assert.strictEqual(
+        !!analyzeCaptionStart(source, { markRegState: state, preferredMark: 'img' }),
+        isCaptionLabelBoundary(source, 8, { layout: 'spaced', hasNumber: true }),
+      )
+    }
+    const compactTails = ['。', '：', '　', ' 本文', '続き', '']
+    for (const tail of compactTails) {
+      const source = '図1' + tail
+      assert.strictEqual(
+        !!analyzeCaptionStart(source, { markRegState: state, preferredMark: 'img' }),
+        isCaptionLabelBoundary(source, 2, { layout: 'compact', hasNumber: true }),
+      )
+    }
+  } catch (err) {
+    ok = false
+    console.log('caption boundary helper tests failed.')
+    console.log(err)
+  }
+  return ok
+}
+
+pass = runCaptionBoundaryTests() && pass
 
 const runHelperExportTests = () => {
   let ok = true

@@ -51,8 +51,11 @@ import mditPCaption, {
   applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
+  createCaptionNumberingPolicy,
+  createCaptionNumberingRuntime,
   getGeneratedLabelDefaults,
   getFallbackLabelForText,
+  isCaptionLabelBoundary,
   setCaptionParagraph,
   getMarkRegForLanguages,
   getMarkRegStateForLanguages,
@@ -66,10 +69,12 @@ import mditPCaption, {
 - `analyzeCaptionStart(text, options)` performs a pure read-only caption-start analysis without mutating markdown-it tokens.
 - `analyzeCaptionParagraph(index, state, context, options)` applies the same paragraph/list and iframe/social/video guards as `setCaptionParagraph`, but only returns a frozen decision. It does not mutate tokens, `context`, or options.
 - `applyCaptionParagraph(decision, state, context, numberingState, options)` applies a decision returned by `analyzeCaptionParagraph`. It verifies the token array, block/inline token identities and types, inline content, children array, and every child identity/type/content before mutation; stale or copied decisions fail closed and return `false`.
+- `createCaptionNumberingPolicy(options)` validates and freezes a reusable generic numbering policy. `createCaptionNumberingRuntime(policy, renderContext)` creates the mutable, render-local counter owner passed in the existing `numberingState` helper argument.
+- `isCaptionLabelBoundary(text, offset, { layout, hasNumber })` exposes the same spaced/compact suffix and joint boundary used by caption recognition without embedding chapter, appendix, or other integrator-specific vocabulary.
 - `getGeneratedLabelDefaults(mark, text, markRegState, preferredLanguages)` resolves locale-aware generated-label metadata such as `{ label: 'Figure', joint: '.', space: ' ' }`. `preferredLanguages` is optional and is used only as the tie-break order for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the state language order instead of disabling fallback generation.
 - `getFallbackLabelForText(mark, text, markRegState, preferredLanguages)` remains available as the small helper that returns only the generated label word.
 - `normalizeLabelPrefixMarkers(value)`, `buildLabelPrefixMarkerRegFromMarkers(markers)`, and `stripLabelPrefixMarker(inlineToken, markerText)` expose the same label-prefix handling used internally by `setCaptionParagraph`.
-- `buildLabelClassLookup(options)` returns the label-class candidates used by integrators that patch generated caption label text later.
+- `buildLabelClassLookup(options)` remains available for older integrators that still locate already-created label spans. New numbering integrations should let p-captions apply numbers while it constructs those tokens.
 - The returned state is a shared cache object. Treat it as read-only; if you need to modify it, clone it first.
 
 If you call the paragraph helpers directly (outside `md.use(mditPCaption, options)`), pass `languages` or a prebuilt `markRegState` when you use non-default languages. Reusing a prebuilt state avoids repeated caller-side setup:
@@ -84,6 +89,8 @@ const opt = {
 ```
 
 `setCaptionParagraph` remains the compatibility wrapper around analyze + apply. It mutates the token stream and returns a boolean: `true` when it detected and transformed a caption paragraph, otherwise `false`. Direct callers may pass partial options; missing fields use the same defaults as the plugin setup path. Treat the options object as immutable after the first helper call; create a new options object if you need different settings.
+
+The helper's fourth argument accepts either the legacy plain `{ img, table }` counter used with `setFigureNumber: true`, or a runtime returned by `createCaptionNumberingRuntime()`. A branded runtime owns its policy independently of `setFigureNumber`; this lets an integrator enable only the captions that have passed its final structural checks.
 
 When `context` is provided to `applyCaptionParagraph`, or `sp` is provided to `setCaptionParagraph`, the helper stores the full decision object as `captionDecision`:
 
@@ -102,6 +109,8 @@ context.captionDecision = {
   prefixMarker,
 };
 ```
+
+`captionDecision` always describes the source. An auto-generated number does not replace `number` or change `hasExplicitNumber`; deferred frozen decisions are never mutated.
 
 Pass the frozen decision object returned by `analyzeCaptionParagraph` directly to `applyCaptionParagraph`; cloning it intentionally loses the private validation snapshot. Apply decisions before rebuilding or reindexing the block token array. Different paragraph decisions can be analyzed first and then applied because applying a caption only mutates that paragraph and its inline children.
 
@@ -185,6 +194,47 @@ if (decision) {
   applyCaptionParagraph(decision, state, context, figureNumberState, opt);
 }
 ```
+
+### Shared numbering policy/runtime
+
+The generic numbering API does not know about chapters or document structure. The caller supplies an opaque sequence key and any display context it needs:
+
+```js
+const policy = createCaptionNumberingPolicy({
+  enabledMarks: ['img', 'table'],
+  explicitCounter: 'max', // 'max' | 'replace' | 'ignore'
+  getSequenceKey({ captionContext }) {
+    return captionContext.numbering.sequenceKey;
+  },
+  parseExplicitNumber({ number, captionContext }) {
+    const numbering = captionContext.numbering;
+    if (!numbering.scoped) return /^[1-9][0-9]*$/.test(number) ? Number(number) : null;
+    const prefix = numbering.displayPrefix + numbering.separator;
+    if (!number.startsWith(prefix)) return null;
+    const tail = number.slice(prefix.length);
+    return /^[1-9][0-9]*$/.test(tail) ? Number(tail) : null;
+  },
+  formatGeneratedNumber({ sequence, captionContext }) {
+    const numbering = captionContext.numbering;
+    return numbering.scoped
+      ? numbering.displayPrefix + numbering.separator + sequence
+      : String(sequence);
+  },
+});
+
+const numberingRuntime = createCaptionNumberingRuntime(policy, { env: state.env });
+setCaptionParagraph(paragraphIndex, state, caption, numberingRuntime, context, opt);
+```
+
+Policy/runtime rules:
+
+- Create a stable policy once during plugin setup and one runtime per Markdown render.
+- `explicitCounter: 'max'` advances only to a greater parsed explicit value, `'replace'` assigns the parsed value, and `'ignore'` preserves the source number without consulting sequence/parser callbacks or changing counter state.
+- `getSequenceKey()` returns `null` for the mark's unscoped counter, a primitive string or finite number for a keyed counter, and must not return `undefined`. Image/table counters remain independent even for equal keys.
+- `parseExplicitNumber()` returns `null` or a positive safe integer. `formatGeneratedNumber()` returns a primitive, non-empty string accepted by the caption number grammar. Promises/thenables are unsupported.
+- Every callback and return value is evaluated before p-captions removes a prefix marker, adds paragraph classes, or changes inline tokens. If a callback fails, p-captions does not commit its token/counter changes. Callbacks themselves are required to be pure synchronous functions.
+- Generated output from the strict policy/runtime API is validated even when the built-in decimal formatter is used. An individual segment longer than six characters (for example `1000000`) throws a `RangeError` before mutation. The legacy `setFigureNumber` path intentionally keeps its historical overflow behavior.
+- `generatedNumberHasNumClass: false` is available for an integrator that must preserve a legacy pipeline where `label-has-num` was decided before its later numbering pass. The default is `true`.
 
 ## Caption detection rules
 
