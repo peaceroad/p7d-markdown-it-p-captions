@@ -13,6 +13,8 @@ const numberPrimaryGroupName = 'pcaptionNumPrimary'
 const numberSecondaryGroupName = 'pcaptionNumSecondary'
 const captionNumberReg = new RegExp('^(?:' + markAfterNum + ')$')
 const maxSequenceKeyLength = 256
+const maxCounterKeyLength = 256
+const canonicalCaptionMarkReg = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 
 // markdown-it 14.2+ preserves Unicode spaces at paragraph boundaries via
 // asciiTrim(), so a label-only caption ending in U+3000 (for example `図　`)
@@ -171,6 +173,8 @@ const createMarkMatcher = (regexes) => {
 }
 
 const langMarkSpecCache = Object.create(null)
+const langExactLabelSpecCache = Object.create(null)
+const exactLabelMatchersByMarkRegState = new WeakMap()
 const normalizeLanguages = (languages) => {
   if (!Array.isArray(languages)) return []
   const validLangs = []
@@ -191,6 +195,7 @@ const getLangMarkSpec = (lang) => {
   const labelLayout = normalizeLabelLayout(data)
   const markAfterPattern = getMarkAfterPatternByLayout(labelLayout)
   const langMarkSpec = {}
+  const langExactLabelSpec = {}
   const marks = Object.keys(data.markReg)
   for (let i = 0; i < marks.length; i++) {
     const mark = marks[i]
@@ -201,8 +206,10 @@ const getLangMarkSpec = (lang) => {
       '^(?<' + labelGroupName + '>' + foldedPattern.source + ')' + markAfterPattern,
       flags,
     )
+    langExactLabelSpec[mark] = new RegExp('^(?:' + foldedPattern.source + ')$', flags)
   }
   langMarkSpecCache[lang] = langMarkSpec
+  langExactLabelSpecCache[lang] = langExactLabelSpec
   return langMarkSpec
 }
 
@@ -225,6 +232,28 @@ const getMarkReg = (langs) => {
     markReg[mark] = createMarkMatcher(markPatterns[mark])
   }
   return markReg
+}
+
+const getExactLabelMatchers = (langs) => {
+  const exactPatterns = Object.create(null)
+  for (let i = 0; i < langs.length; i++) {
+    const lang = langs[i]
+    getLangMarkSpec(lang)
+    const langExactLabelSpec = langExactLabelSpecCache[lang]
+    const marks = Object.keys(langExactLabelSpec)
+    for (let j = 0; j < marks.length; j++) {
+      const mark = marks[j]
+      if (!exactPatterns[mark]) exactPatterns[mark] = []
+      exactPatterns[mark].push(langExactLabelSpec[mark])
+    }
+  }
+  const exactMatchers = Object.create(null)
+  const marks = Object.keys(exactPatterns)
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i]
+    exactMatchers[mark] = createMarkMatcher(exactPatterns[mark])
+  }
+  return exactMatchers
 }
 
 const buildDerivedGeneratedLabelDefaults = (label, labelLayout) => {
@@ -334,6 +363,7 @@ const createMarkRegState = (langs) => {
     blockquoteWithImgEntries,
     generatedLabelDefaultsByLang,
   }
+  exactLabelMatchersByMarkRegState.set(state, getExactLabelMatchers(langs))
   return state
 }
 
@@ -387,6 +417,53 @@ const joinClassPrefix = (prefix, suffix) => {
   return prefix ? prefix + '-' + suffix : suffix
 }
 
+const autoLabelNumberMarkAliases = Object.freeze(Object.assign(Object.create(null), {
+  img: 'img',
+  table: 'table',
+  code: 'pre-code',
+  'pre-code': 'pre-code',
+  samp: 'pre-samp',
+  'pre-samp': 'pre-samp',
+  video: 'video',
+}))
+
+const canonicalizeCaptionNumberingMark = (value) => (
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(autoLabelNumberMarkAliases, value)
+    ? autoLabelNumberMarkAliases[value]
+    : value
+)
+
+const normalizeAutoLabelNumberSets = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError('autoLabelNumberSets must be an array.')
+  }
+  const normalized = []
+  const seen = new Set()
+  for (let index = 0; index < value.length; index++) {
+    const entry = value[index]
+    if (typeof entry !== 'string' || !entry || entry.trim() !== entry) {
+      throw new TypeError('autoLabelNumberSets entries must be non-empty supported mark strings without surrounding whitespace.')
+    }
+    if (!Object.prototype.hasOwnProperty.call(autoLabelNumberMarkAliases, entry)) {
+      throw new TypeError(`autoLabelNumberSets does not support the mark "${entry}".`)
+    }
+    const mark = autoLabelNumberMarkAliases[entry]
+    if (seen.has(mark)) continue
+    seen.add(mark)
+    normalized.push(mark)
+  }
+  return Object.freeze(normalized)
+}
+
+const normalizeRemoveUnnumberedLabelExceptMarks = (value) => {
+  if (!Array.isArray(value) || value.length === 0) return []
+  const normalized = new Array(value.length)
+  for (let index = 0; index < value.length; index++) {
+    normalized[index] = canonicalizeCaptionNumberingMark(value[index])
+  }
+  return normalized
+}
+
 const baseSetCaptionOpt = {
   languages: ['en', 'ja'],
   classPrefix: 'caption',
@@ -431,10 +508,10 @@ const resolveSetCaptionOpt = (opt) => {
   if (!hasConfiguredLabelClassFollowsFigure && normalized.figureToLabelClassMap) {
     normalized.labelClassFollowsFigure = true
   }
-  if (
-    Array.isArray(normalized.removeUnnumberedLabelExceptMarks) &&
-    normalized.removeUnnumberedLabelExceptMarks.length > 0
-  ) {
+  normalized.removeUnnumberedLabelExceptMarks = normalizeRemoveUnnumberedLabelExceptMarks(
+    normalized.removeUnnumberedLabelExceptMarks,
+  )
+  if (normalized.removeUnnumberedLabelExceptMarks.length > 0) {
     normalized.removeUnnumberedLabelExceptMarksSet = new Set(normalized.removeUnnumberedLabelExceptMarks)
   } else {
     normalized.removeUnnumberedLabelExceptMarksSet = null
@@ -457,11 +534,11 @@ const normalizeCaptionNumberingEnabledMarks = (value) => {
   if (!Array.isArray(source)) {
     throw new TypeError('createCaptionNumberingPolicy enabledMarks must be an array.')
   }
-  const enabledMarks = { img: false, table: false }
+  const enabledMarks = Object.create(null)
   for (let index = 0; index < source.length; index++) {
     const mark = source[index]
-    if (mark !== 'img' && mark !== 'table') {
-      throw new TypeError('createCaptionNumberingPolicy enabledMarks entries must be "img" or "table".')
+    if (typeof mark !== 'string' || !mark || !canonicalCaptionMarkReg.test(mark)) {
+      throw new TypeError('createCaptionNumberingPolicy enabledMarks entries must be canonical caption mark strings.')
     }
     enabledMarks[mark] = true
   }
@@ -492,6 +569,7 @@ const createCaptionNumberingPolicy = (options) => {
   const policy = Object.freeze({
     enabledMarks: normalizeCaptionNumberingEnabledMarks(options.enabledMarks),
     explicitCounter,
+    getCounterKey: normalizeCaptionNumberingCallback(options, 'getCounterKey'),
     getSequenceKey: normalizeCaptionNumberingCallback(options, 'getSequenceKey'),
     parseExplicitNumber: normalizeCaptionNumberingCallback(options, 'parseExplicitNumber'),
     formatGeneratedNumber: normalizeCaptionNumberingCallback(options, 'formatGeneratedNumber'),
@@ -509,12 +587,22 @@ const createCaptionNumberingRuntime = (policy, renderContext = null) => {
     throw new TypeError('createCaptionNumberingRuntime renderContext must be an object or null.')
   }
   const runtime = Object.freeze({ policy })
+  // Callback input shapes are cumulative: base, +counterKey, +sequenceKey.
+  const callbackStage = policy.parseExplicitNumber || policy.formatGeneratedNumber
+    ? 3
+    : policy.getSequenceKey
+      ? 2
+      : policy.getCounterKey
+        ? 1
+        : 0
   captionNumberingRuntimeState.set(runtime, {
     policy,
-    validateDefaultGeneratedNumber: policy !== legacyCaptionNumberingPolicy,
+    callbackStage,
+    validateGeneratedNumber: policy !== legacyCaptionNumberingPolicy,
     renderContext,
-    unscopedCounters: { img: 0, table: 0 },
-    keyedCountersByMark: null,
+    countersByStringKey: Object.create(null),
+    countersByNumberKey: null,
+    scopedCounters: null,
   })
   return runtime
 }
@@ -526,6 +614,13 @@ const legacyCaptionNumberingPolicy = createCaptionNumberingPolicy({
 
 const getMarkRegStateForLanguages = (languages) => resolveMarkRegState(languages)
 const getMarkRegForLanguages = (languages) => resolveMarkRegState(languages).markReg
+const isCaptionLabelForMark = (labelText, mark, markRegState) => {
+  if (typeof labelText !== 'string' || !labelText || typeof mark !== 'string' || !mark) return false
+  const matcherTable = exactLabelMatchersByMarkRegState.get(markRegState)
+  if (!matcherTable) return false
+  const matcher = matcherTable[mark]
+  return !!(matcher && matcher.test(labelText))
+}
 const isJapaneseCharCode = (code) => {
   return (
     (code >= 0x3040 && code <= 0x30ff) ||
@@ -978,27 +1073,56 @@ const buildCaptionClassNames = (mark, suffix, sp, opt) => {
   return classNames.join(' ')
 }
 
+const hasOwnOption = (option, name) => (
+  !!option && (typeof option === 'object' || typeof option === 'function') &&
+  Object.prototype.hasOwnProperty.call(option, name)
+)
+
+const createStandaloneCaptionNumberingPolicy = (option, opt, hasExplicitSets) => {
+  if (!hasExplicitSets) return opt.setFigureNumber ? legacyCaptionNumberingPolicy : null
+  const normalizedMarks = normalizeAutoLabelNumberSets(option.autoLabelNumberSets)
+  let enabledMarks = normalizedMarks
+  if (opt.removeUnnumberedLabel) {
+    const exceptMarks = opt.removeUnnumberedLabelExceptMarksSet
+    enabledMarks = normalizedMarks.filter(mark => exceptMarks && exceptMarks.has(mark))
+  }
+  if (enabledMarks.length === 0) return null
+  return createCaptionNumberingPolicy({
+    enabledMarks,
+    explicitCounter: 'max',
+  })
+}
+
 const mditPCaption = (md, option) => {
   if (md[installedKey]) return
-  Object.defineProperty(md, installedKey, {
-    value: true,
-    configurable: true,
-  })
-
+  const hasExplicitAutoLabelNumberSets = hasOwnOption(option, 'autoLabelNumberSets')
+  const formattingOption = hasExplicitAutoLabelNumberSets && option && typeof option === 'object'
+    ? Object.assign({}, option, { setFigureNumber: false })
+    : option
   // Resolve regex/options once per plugin instance and avoid mutating shared module globals.
-  const opt = resolveSetCaptionOpt(option || {})
+  const opt = resolveSetCaptionOpt(formattingOption || {})
+  const numberingPolicy = createStandaloneCaptionNumberingPolicy(
+    option || {},
+    opt,
+    hasExplicitAutoLabelNumberSets,
+  )
 
   md.core.ruler.after('inline', 'p-caption', (state) => {
-    const numberingRuntime = opt.setFigureNumber
-      ? createCaptionNumberingRuntime(legacyCaptionNumberingPolicy, { env: state.env })
+    const numberingRuntime = numberingPolicy
+      ? createCaptionNumberingRuntime(numberingPolicy, { env: state.env })
       : null
-    const len = state.tokens.length
+    const tokens = state.tokens
+    const len = tokens.length
     for (let n = 0; n < len - 1; n++) {
-      if (state.tokens[n].type !== 'paragraph_open') continue
+      if (tokens[n].type !== 'paragraph_open') continue
       // Core plugin does not track caption/sp state, but helper keeps these args
       // for downstream integrations such as p7d-markdown-it-figure-with-p-caption.
       setCaptionParagraph(n, state, null, numberingRuntime, null, opt)
     }
+  })
+  Object.defineProperty(md, installedKey, {
+    value: true,
+    configurable: true,
   })
 }
 
@@ -1113,6 +1237,28 @@ const isThenable = (value) => (
   !!value && (typeof value === 'object' || typeof value === 'function') && typeof value.then === 'function'
 )
 
+const validateCounterKey = (value) => {
+  if (isThenable(value)) {
+    throw new TypeError('getCounterKey must return a non-empty primitive string or a finite number; thenables are not supported.')
+  }
+  if (typeof value === 'string') {
+    if (!value) {
+      throw new TypeError('getCounterKey string results must not be empty.')
+    }
+    if (value.length > maxCounterKeyLength) {
+      throw new RangeError(`getCounterKey string results must not exceed ${maxCounterKeyLength} UTF-16 code units.`)
+    }
+    return value
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new TypeError('getCounterKey number results must be finite.')
+    }
+    return value
+  }
+  throw new TypeError('getCounterKey must return a non-empty primitive string or a finite number.')
+}
+
 const validateSequenceKey = (value) => {
   if (isThenable(value)) {
     throw new TypeError('getSequenceKey must return null, a primitive string, or a finite number; thenables are not supported.')
@@ -1163,28 +1309,40 @@ const validateFormattedNumber = (value) => {
   return value
 }
 
-const getRuntimeCounter = (runtimeState, mark, sequenceKey) => {
-  if (sequenceKey === null) return runtimeState.unscopedCounters[mark] || 0
-  const keyedCountersByMark = runtimeState.keyedCountersByMark
-  if (!keyedCountersByMark) return 0
-  const counters = keyedCountersByMark[mark]
+const getRuntimeCounter = (runtimeState, counterKey, sequenceKey) => {
+  if (sequenceKey === null) {
+    if (typeof counterKey === 'string') {
+      const value = runtimeState.countersByStringKey[counterKey]
+      return value === undefined ? 0 : value
+    }
+    const counters = runtimeState.countersByNumberKey
+    if (!counters) return 0
+    const value = counters.get(counterKey)
+    return value === undefined ? 0 : value
+  }
+  const scopedCounters = runtimeState.scopedCounters
+  if (!scopedCounters) return 0
+  const counters = scopedCounters.get(counterKey)
   if (!counters) return 0
   const value = counters.get(sequenceKey)
   return value === undefined ? 0 : value
 }
 
-const commitRuntimeCounter = (runtimeState, mark, sequenceKey, value) => {
+const commitRuntimeCounter = (runtimeState, counterKey, sequenceKey, value) => {
   if (sequenceKey === null) {
-    runtimeState.unscopedCounters[mark] = value
+    if (typeof counterKey === 'string') {
+      runtimeState.countersByStringKey[counterKey] = value
+      return
+    }
+    if (!runtimeState.countersByNumberKey) runtimeState.countersByNumberKey = new Map()
+    runtimeState.countersByNumberKey.set(counterKey, value)
     return
   }
-  if (!runtimeState.keyedCountersByMark) {
-    runtimeState.keyedCountersByMark = { img: null, table: null }
-  }
-  let counters = runtimeState.keyedCountersByMark[mark]
+  if (!runtimeState.scopedCounters) runtimeState.scopedCounters = new Map()
+  let counters = runtimeState.scopedCounters.get(counterKey)
   if (!counters) {
     counters = new Map()
-    runtimeState.keyedCountersByMark[mark] = counters
+    runtimeState.scopedCounters.set(counterKey, counters)
   }
   counters.set(sequenceKey, value)
 }
@@ -1192,12 +1350,9 @@ const commitRuntimeCounter = (runtimeState, mark, sequenceKey, value) => {
 const resolveRuntimeCaptionNumbering = (decision, context, runtimeState) => {
   const policy = runtimeState.policy
   const mark = decision.mark
-  if ((mark !== 'img' && mark !== 'table') || !policy.enabledMarks[mark]) return null
+  if (!policy.enabledMarks[mark]) return null
   if (decision.hasExplicitNumber && policy.explicitCounter === 'ignore') return null
-  const hasCallback = !!(
-    policy.getSequenceKey || policy.parseExplicitNumber || policy.formatGeneratedNumber
-  )
-  const callbackBase = hasCallback
+  const callbackBase = runtimeState.callbackStage > 0
     ? {
         mark,
         captionDecision: decision,
@@ -1205,16 +1360,31 @@ const resolveRuntimeCaptionNumbering = (decision, context, runtimeState) => {
         renderContext: runtimeState.renderContext,
       }
     : null
-  const sequenceKey = policy.getSequenceKey
-    ? validateSequenceKey(policy.getSequenceKey(callbackBase))
+  const counterKey = policy.getCounterKey
+    ? validateCounterKey(policy.getCounterKey(callbackBase))
+    : mark
+  const counterCallbackBase = runtimeState.callbackStage > 1
+    ? {
+        ...callbackBase,
+        counterKey,
+      }
     : null
-  const currentCounter = getRuntimeCounter(runtimeState, mark, sequenceKey)
+  const sequenceKey = policy.getSequenceKey
+    ? validateSequenceKey(policy.getSequenceKey(counterCallbackBase))
+    : null
+  const resolvedCallbackBase = runtimeState.callbackStage > 2
+    ? {
+        ...counterCallbackBase,
+        sequenceKey,
+      }
+    : null
+  const currentCounter = getRuntimeCounter(runtimeState, counterKey, sequenceKey)
 
   if (decision.hasExplicitNumber) {
     let explicitValue
     if (policy.parseExplicitNumber) {
       explicitValue = validateParsedExplicitNumber(policy.parseExplicitNumber({
-        ...callbackBase,
+        ...resolvedCallbackBase,
         number: decision.number,
       }))
     } else {
@@ -1222,7 +1392,7 @@ const resolveRuntimeCaptionNumbering = (decision, context, runtimeState) => {
     }
     if (explicitValue === null) return null
     if (policy.explicitCounter === 'max' && explicitValue <= currentCounter) return null
-    return { runtimeState, mark, sequenceKey, nextCounter: explicitValue, generatedNumber: null }
+    return { runtimeState, counterKey, sequenceKey, nextCounter: explicitValue, generatedNumber: null }
   }
 
   const nextCounter = currentCounter + 1
@@ -1231,17 +1401,16 @@ const resolveRuntimeCaptionNumbering = (decision, context, runtimeState) => {
   }
   const formattedNumber = policy.formatGeneratedNumber
     ? policy.formatGeneratedNumber({
-        ...callbackBase,
-        sequenceKey,
+        ...resolvedCallbackBase,
         sequence: nextCounter,
       })
     : String(nextCounter)
-  const generatedNumber = (
-    policy.formatGeneratedNumber || runtimeState.validateDefaultGeneratedNumber
-  ) ? validateFormattedNumber(formattedNumber) : formattedNumber
+  const generatedNumber = runtimeState.validateGeneratedNumber
+    ? validateFormattedNumber(formattedNumber)
+    : formattedNumber
   return {
     runtimeState,
-    mark,
+    counterKey,
     sequenceKey,
     nextCounter,
     generatedNumber,
@@ -1277,7 +1446,7 @@ const commitCaptionNumbering = (numberingPlan) => {
   if (numberingPlan.runtimeState) {
     commitRuntimeCounter(
       numberingPlan.runtimeState,
-      numberingPlan.mark,
+      numberingPlan.counterKey,
       numberingPlan.sequenceKey,
       numberingPlan.nextCounter,
     )
@@ -1523,6 +1692,7 @@ export {
   applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
+  canonicalizeCaptionNumberingMark,
   createCaptionNumberingPolicy,
   createCaptionNumberingRuntime,
   isCaptionLabelBoundary,
@@ -1534,7 +1704,9 @@ export {
   jointHalfWidth,
   getGeneratedLabelDefaults,
   getFallbackLabelForText,
+  isCaptionLabelForMark,
   getMarkRegStateForLanguages,
   getMarkRegForLanguages,
+  normalizeAutoLabelNumberSets,
   stripLabelPrefixMarker,
 }

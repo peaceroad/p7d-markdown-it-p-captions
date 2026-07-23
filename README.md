@@ -51,14 +51,17 @@ import mditPCaption, {
   applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
+  canonicalizeCaptionNumberingMark,
   createCaptionNumberingPolicy,
   createCaptionNumberingRuntime,
   getGeneratedLabelDefaults,
   getFallbackLabelForText,
   isCaptionLabelBoundary,
+  isCaptionLabelForMark,
   setCaptionParagraph,
   getMarkRegForLanguages,
   getMarkRegStateForLanguages,
+  normalizeAutoLabelNumberSets,
   normalizeLabelPrefixMarkers,
   stripLabelPrefixMarker,
 } from 'p7d-markdown-it-p-captions';
@@ -71,6 +74,8 @@ import mditPCaption, {
 - `applyCaptionParagraph(decision, state, context, numberingState, options)` applies a decision returned by `analyzeCaptionParagraph`. It verifies the token array, block/inline token identities and types, inline content, children array, and every child identity/type/content before mutation; stale or copied decisions fail closed and return `false`.
 - `createCaptionNumberingPolicy(options)` validates and freezes a reusable generic numbering policy. `createCaptionNumberingRuntime(policy, renderContext)` creates the mutable, render-local counter owner passed in the existing `numberingState` helper argument.
 - `isCaptionLabelBoundary(text, offset, { layout, hasNumber })` exposes the same spaced/compact suffix and joint boundary used by caption recognition without embedding chapter, appendix, or other integrator-specific vocabulary.
+- `isCaptionLabelForMark(labelText, mark, markRegState)` tests a source label word against one mark using the same language pattern and case policy as caption detection. It accepts only states returned by `getMarkRegStateForLanguages()` and returns `false` for invalid, inactive, copied, or duck-typed state objects.
+- `canonicalizeCaptionNumberingMark(value)` converts only the public `code` / `samp` aliases to `pre-code` / `pre-samp` and preserves other values; `normalizeAutoLabelNumberSets(value)` applies that rule while validating the strict standalone/figure-facing allowlist.
 - `getGeneratedLabelDefaults(mark, text, markRegState, preferredLanguages)` resolves locale-aware generated-label metadata such as `{ label: 'Figure', joint: '.', space: ' ' }`. `preferredLanguages` is optional and is used only as the tie-break order for ambiguous unlabeled fallback text; unsupported or inactive hints fall back to the state language order instead of disabling fallback generation.
 - `getFallbackLabelForText(mark, text, markRegState, preferredLanguages)` remains available as the small helper that returns only the generated label word.
 - `normalizeLabelPrefixMarkers(value)`, `buildLabelPrefixMarkerRegFromMarkers(markers)`, and `stripLabelPrefixMarker(inlineToken, markerText)` expose the same label-prefix handling used internally by `setCaptionParagraph`.
@@ -90,7 +95,7 @@ const opt = {
 
 `setCaptionParagraph` remains the compatibility wrapper around analyze + apply. It mutates the token stream and returns a boolean: `true` when it detected and transformed a caption paragraph, otherwise `false`. Direct callers may pass partial options; missing fields use the same defaults as the plugin setup path. Treat the options object as immutable after the first helper call; create a new options object if you need different settings.
 
-The helper's fourth argument accepts either the legacy plain `{ img, table }` counter used with `setFigureNumber: true`, or a runtime returned by `createCaptionNumberingRuntime()`. A branded runtime owns its policy independently of `setFigureNumber`; this lets an integrator enable only the captions that have passed its final structural checks.
+The helper's fourth argument accepts either the legacy plain `{ img, table }` counter used with `setFigureNumber: true`, or a runtime returned by `createCaptionNumberingRuntime()`. A branded runtime owns its policy independently of `setFigureNumber`; this lets an integrator enable only the captions that have passed its final structural checks. Direct helpers never create a runtime merely because `autoLabelNumberSets` appears in their formatting options.
 
 When `context` is provided to `applyCaptionParagraph`, or `sp` is provided to `setCaptionParagraph`, the helper stores the full decision object as `captionDecision`:
 
@@ -201,9 +206,12 @@ The generic numbering API does not know about chapters or document structure. Th
 
 ```js
 const policy = createCaptionNumberingPolicy({
-  enabledMarks: ['img', 'table'],
+  enabledMarks: ['img', 'pre-code', 'pre-samp', 'video'],
   explicitCounter: 'max', // 'max' | 'replace' | 'ignore'
-  getSequenceKey({ captionContext }) {
+  getCounterKey({ mark }) {
+    return mark === 'img' || mark === 'pre-samp' ? 'figure' : mark;
+  },
+  getSequenceKey({ captionContext, counterKey }) {
     return captionContext.numbering.sequenceKey;
   },
   parseExplicitNumber({ number, captionContext }) {
@@ -229,9 +237,11 @@ setCaptionParagraph(paragraphIndex, state, caption, numberingRuntime, context, o
 Policy/runtime rules:
 
 - Create a stable policy once during plugin setup and one runtime per Markdown render.
+- `enabledMarks` accepts deduplicated canonical identifiers matching `^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`. It is trusted setup input and has no arbitrary array-length or identifier-length cap. The generic API does not treat `code` or `samp` as aliases; user-facing `autoLabelNumberSets` performs that conversion.
 - `explicitCounter: 'max'` advances only to a greater parsed explicit value, `'replace'` assigns the parsed value, and `'ignore'` preserves the source number without consulting sequence/parser callbacks or changing counter state.
-- `getSequenceKey()` returns `null` for the mark's unscoped counter, a primitive string or finite number for a keyed counter, and must not return `undefined`. Image/table counters remain independent even for equal keys.
-- `parseExplicitNumber()` returns `null` or a positive safe integer. `formatGeneratedNumber()` returns a primitive, non-empty string accepted by the caption number grammar. Promises/thenables are unsupported.
+- `getCounterKey()` selects the semantic counter series and defaults to the decision mark. It returns a non-empty primitive string of at most 256 UTF-16 code units or a finite number. Equal counter keys let different marks share one sequence.
+- `getSequenceKey()` returns `null` for the unscoped counter or a primitive string/finite number for a scoped partition, and must not return `undefined`. The runtime identifies state by `counterKey × sequenceKey` without string-concatenating the pair.
+- `getSequenceKey()` receives the validated `counterKey`. `parseExplicitNumber()` and `formatGeneratedNumber()` receive both validated keys. The parser returns `null` or a positive safe integer; the formatter returns a primitive, non-empty string accepted by the caption number grammar. Promises/thenables are unsupported.
 - Every callback and return value is evaluated before p-captions removes a prefix marker, adds paragraph classes, or changes inline tokens. If a callback fails, p-captions does not commit its token/counter changes. Callbacks themselves are required to be pure synchronous functions.
 - Generated output from the strict policy/runtime API is validated even when the built-in decimal formatter is used. An individual segment longer than six characters (for example `1000000`) throws a `RangeError` before mutation. The legacy `setFigureNumber` path intentionally keeps its historical overflow behavior.
 - `generatedNumberHasNumClass: false` is available for an integrator that must preserve a legacy pipeline where `label-has-num` was decided before its later numbering pass. The default is `true`.
@@ -321,6 +331,7 @@ Note: paragraphs immediately following `list_item_open` are intentionally exclud
 | `removeUnnumberedLabelExceptMarks` | Keep unnumbered labels for specific marks. |
 | `removeMarkNameInCaptionClass` | Use `caption-label`/`caption-body` style classes without mark suffix. |
 | `wrapCaptionBody` | Wrap caption body in `<span class="...-body">...</span>`. |
+| `autoLabelNumberSets` | Strict mark allowlist for standalone automatic numbering (`img`, `table`, `code`, `samp`, `video`, or canonical code/samp names). |
 | `setFigureNumber` | Auto-number `img`/`table` captions when number is omitted. |
 | `labelClassFollowsFigure` | Reuse integrator-provided figure class base for label/body spans. |
 | `figureToLabelClassMap` | Override label/body class bases for specific figure classes. |
@@ -488,7 +499,24 @@ console.log(md.render(src));
 
 When `removeMarkNameInCaptionClass` is enabled, the wrapper class becomes `caption-body`.
 
-## Option: Automatically number figures and tables
+## Option: Automatically number selected caption marks
+
+Use `autoLabelNumberSets` for the strict standalone numbering path. Supported values are `img`, `table`, `code` / `pre-code`, `samp` / `pre-samp`, and `video`.
+
+```js
+md.use(mditPCaption, {
+  autoLabelNumberSets: ['img', 'table', 'code', 'samp', 'video'],
+});
+```
+
+- `code` and `samp` are normalized to the canonical marks `pre-code` and `pre-samp`.
+- An explicit array takes precedence over legacy `setFigureNumber`; `[]` explicitly disables numbering.
+- Explicit `undefined`, `null`, non-arrays, unsupported marks, and invalid entries throw during the first plugin setup. A duplicate `.use()` remains first-install-wins and ignores later options.
+- Counters are separate by canonical mark in standalone mode. p-captions has no adjacent-block context, so an ambiguous Japanese `図` is classified as `img` and `リスト` as `pre-code`; it does not infer a samp block.
+- With `removeUnnumberedLabel: true`, the strict path numbers only marks also present in `removeUnnumberedLabelExceptMarks`. The aliases `code` and `samp` are accepted there as well.
+- Every render creates fresh render-local counters.
+
+## Legacy option: Automatically number figures and tables
 
 Turn on automatic numbering for image (`caption-img`) and table (`caption-table`) captions that do not already include a number.
 
@@ -504,6 +532,7 @@ console.log(md.render(src));
 
 - Counters are maintained separately for figures and tables and reset for every Markdown render.
 - Captions that already contain a number keep that number, and the counter is updated so the next auto-generated value continues the sequence.
+- This compatibility path intentionally preserves historical `999999 -> 1000000` generation. New `autoLabelNumberSets` numbering uses strict pre-mutation validation instead.
 
 ## Detection examples (reference)
 

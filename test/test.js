@@ -11,6 +11,7 @@ import mditPCaption, {
   applyCaptionParagraph,
   buildLabelClassLookup,
   buildLabelPrefixMarkerRegFromMarkers,
+  canonicalizeCaptionNumberingMark,
   createCaptionNumberingPolicy,
   createCaptionNumberingRuntime,
   getGeneratedLabelDefaults,
@@ -18,6 +19,8 @@ import mditPCaption, {
   getMarkRegForLanguages,
   getMarkRegStateForLanguages,
   isCaptionLabelBoundary,
+  isCaptionLabelForMark,
+  normalizeAutoLabelNumberSets,
   normalizeLabelPrefixMarkers,
   setCaptionParagraph,
   stripLabelPrefixMarker,
@@ -630,8 +633,26 @@ const runCaptionNumberingPolicyTests = () => {
     assert.strictEqual(Object.isFrozen(policy), true)
     assert.throws(() => createCaptionNumberingPolicy([]), TypeError)
     assert.throws(() => createCaptionNumberingPolicy({ enabledMarks: 'img' }), TypeError)
-    assert.throws(() => createCaptionNumberingPolicy({ enabledMarks: ['video'] }), TypeError)
+    const genericPolicy = createCaptionNumberingPolicy({
+      enabledMarks: ['video', 'pre-code', 'pre-samp', 'constructor', 'video'],
+    })
+    assert.strictEqual(genericPolicy.enabledMarks.video, true)
+    assert.strictEqual(genericPolicy.enabledMarks['pre-code'], true)
+    assert.strictEqual(genericPolicy.enabledMarks['pre-samp'], true)
+    assert.strictEqual(genericPolicy.enabledMarks.constructor, true)
+    assert.strictEqual(Object.getPrototypeOf(genericPolicy.enabledMarks), null)
+    const manyGenericMarks = Array.from({ length: 100 }, (_, index) => `mark-${index}`)
+    const longGenericMark = `mark-${'x'.repeat(512)}`
+    const unrestrictedGenericPolicy = createCaptionNumberingPolicy({
+      enabledMarks: [...manyGenericMarks, longGenericMark],
+    })
+    assert.strictEqual(unrestrictedGenericPolicy.enabledMarks['mark-99'], true)
+    assert.strictEqual(unrestrictedGenericPolicy.enabledMarks[longGenericMark], true)
+    for (const invalidMark of [null, '', ' code', 'code ', 'Pre-code', 'pre--code', '_private', '__proto__']) {
+      assert.throws(() => createCaptionNumberingPolicy({ enabledMarks: [invalidMark] }), TypeError)
+    }
     assert.throws(() => createCaptionNumberingPolicy({ explicitCounter: 'latest' }), TypeError)
+    assert.throws(() => createCaptionNumberingPolicy({ getCounterKey: true }), TypeError)
     assert.throws(() => createCaptionNumberingPolicy({ getSequenceKey: true }), TypeError)
     assert.throws(() => createCaptionNumberingPolicy({ generatedNumberHasNumClass: 'yes' }), TypeError)
     assert.throws(() => createCaptionNumberingRuntime({ ...policy }), TypeError)
@@ -643,6 +664,24 @@ const runCaptionNumberingPolicyTests = () => {
     assert.match(applyWithRuntime('Figure 2. Lower.\n', runtime).html, /Figure 2/)
     assert.match(applyWithRuntime('Figure. Next.\n', runtime).html, /Figure 6/)
     assert.match(applyWithRuntime('Table. First.\n', runtime).html, /Table 1/)
+
+    const callerMarks = ['video']
+    const copiedPolicy = createCaptionNumberingPolicy({ enabledMarks: callerMarks })
+    callerMarks[0] = 'img'
+    assert.strictEqual(copiedPolicy.enabledMarks.video, true)
+    assert.strictEqual(copiedPolicy.enabledMarks.img, undefined)
+
+    let disabledCounterKeyCalls = 0
+    const imgOnlyPolicy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      getCounterKey() {
+        disabledCounterKeyCalls++
+        return 'figure'
+      },
+    })
+    const imgOnlyRuntime = createCaptionNumberingRuntime(imgOnlyPolicy)
+    assert.doesNotMatch(applyWithRuntime('Video. Disabled.\n', imgOnlyRuntime).html, /Video 1/)
+    assert.strictEqual(disabledCounterKeyCalls, 0)
   } catch (err) {
     ok = false
     console.log('caption numbering policy test "built-in counters" failed.')
@@ -650,10 +689,15 @@ const runCaptionNumberingPolicyTests = () => {
   }
 
   try {
+    let counterKeyCalls = 0
     let sequenceKeyCalls = 0
     const policy = createCaptionNumberingPolicy({
       enabledMarks: ['img'],
       explicitCounter: 'ignore',
+      getCounterKey() {
+        counterKeyCalls++
+        return 'img'
+      },
       getSequenceKey() {
         sequenceKeyCalls++
         return null
@@ -664,12 +708,84 @@ const runCaptionNumberingPolicyTests = () => {
     })
     const runtime = createCaptionNumberingRuntime(policy)
     assert.match(applyWithRuntime('Figure 5. Manual.\n', runtime).html, /Figure 5/)
+    assert.strictEqual(counterKeyCalls, 0)
     assert.strictEqual(sequenceKeyCalls, 0)
     assert.match(applyWithRuntime('Figure. First automatic.\n', runtime).html, /Figure 1/)
+    assert.strictEqual(counterKeyCalls, 1)
     assert.strictEqual(sequenceKeyCalls, 1)
   } catch (err) {
     ok = false
     console.log('caption numbering policy test "ignored explicit counters" failed.')
+    console.log(err)
+  }
+
+  try {
+    const calls = []
+    const policy = createCaptionNumberingPolicy({
+      enabledMarks: ['img', 'pre-samp'],
+      getCounterKey(input) {
+        calls.push(['counter', input.mark, 'counterKey' in input, 'sequenceKey' in input])
+        return 'shared'
+      },
+      getSequenceKey(input) {
+        calls.push(['sequence', input.counterKey, 'sequenceKey' in input])
+        return null
+      },
+      parseExplicitNumber(input) {
+        calls.push(['parse', input.counterKey, input.sequenceKey, input.number])
+        return Number(input.number)
+      },
+      formatGeneratedNumber(input) {
+        calls.push(['format', input.counterKey, input.sequenceKey, input.sequence])
+        return String(input.sequence)
+      },
+    })
+    const runtime = createCaptionNumberingRuntime(policy)
+    assert.match(applyWithRuntime('Figure. First.\n', runtime).html, /Figure 1/)
+    assert.match(applyWithRuntime('Terminal. Shared.\n', runtime).html, /Terminal 2/)
+    assert.match(applyWithRuntime('Figure 5. Manual.\n', runtime).html, /Figure 5/)
+    assert.match(applyWithRuntime('Terminal. Next.\n', runtime).html, /Terminal 6/)
+    assert.deepStrictEqual(calls[0], ['counter', 'img', false, false])
+    assert.deepStrictEqual(calls[1], ['sequence', 'shared', false])
+    assert.deepStrictEqual(calls[2], ['format', 'shared', null, 1])
+    assert.ok(calls.some(call => call[0] === 'parse' && call[1] === 'shared' && call[2] === null && call[3] === '5'))
+
+    const typedPolicy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      getCounterKey({ captionContext }) {
+        return captionContext.counterKey
+      },
+      getSequenceKey({ captionContext }) {
+        return captionContext.sequenceKey
+      },
+    })
+    const typedRuntime = createCaptionNumberingRuntime(typedPolicy)
+    assert.match(applyWithRuntime('Figure. String one.\n', typedRuntime, { counterKey: '1', sequenceKey: null }).html, /Figure 1/)
+    assert.match(applyWithRuntime('Figure. Number one.\n', typedRuntime, { counterKey: 1, sequenceKey: null }).html, /Figure 1/)
+    assert.match(applyWithRuntime('Figure. String two.\n', typedRuntime, { counterKey: '1', sequenceKey: null }).html, /Figure 2/)
+    assert.match(applyWithRuntime('Figure. Scoped A.\n', typedRuntime, { counterKey: 'shared', sequenceKey: 'A' }).html, /Figure 1/)
+    assert.match(applyWithRuntime('Figure. Scoped B.\n', typedRuntime, { counterKey: 'shared', sequenceKey: 'B' }).html, /Figure 1/)
+    assert.match(applyWithRuntime('Figure. Scoped A2.\n', typedRuntime, { counterKey: 'shared', sequenceKey: 'A' }).html, /Figure 2/)
+    assert.match(applyWithRuntime('Figure. Proto.\n', typedRuntime, { counterKey: '__proto__', sequenceKey: null }).html, /Figure 1/)
+    assert.match(applyWithRuntime('Figure. Constructor.\n', typedRuntime, { counterKey: 'constructor', sequenceKey: null }).html, /Figure 1/)
+
+    const sequenceOnlyInputs = []
+    const sequenceOnlyPolicy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      getSequenceKey(input) {
+        sequenceOnlyInputs.push(input)
+        return 'chapter:1'
+      },
+    })
+    const sequenceOnlyRuntime = createCaptionNumberingRuntime(sequenceOnlyPolicy)
+    assert.match(applyWithRuntime('Figure. Sequence one.\n', sequenceOnlyRuntime).html, /Figure 1/)
+    assert.match(applyWithRuntime('Figure. Sequence two.\n', sequenceOnlyRuntime).html, /Figure 2/)
+    assert.strictEqual(sequenceOnlyInputs.length, 2)
+    assert.strictEqual(sequenceOnlyInputs[0].counterKey, 'img')
+    assert.strictEqual('sequenceKey' in sequenceOnlyInputs[0], false)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "counter key grouping and storage" failed.')
     console.log(err)
   }
 
@@ -739,6 +855,53 @@ const runCaptionNumberingPolicyTests = () => {
   }
 
   try {
+    let failCounterKey = true
+    const policy = createCaptionNumberingPolicy({
+      enabledMarks: ['img'],
+      getCounterKey() {
+        if (failCounterKey) throw new Error('counter key failure')
+        return 'figure'
+      },
+    })
+    const runtime = createCaptionNumberingRuntime(policy)
+    const state = createStateForMarkdown('▼ Figure. A cat.\n')
+    const paragraphIndex = state.tokens.findIndex(token => token.type === 'paragraph_open')
+    const before = JSON.stringify(state.tokens)
+    assert.throws(
+      () => setCaptionParagraph(paragraphIndex, state, null, runtime, {}, { labelPrefixMarker: '▼' }),
+      /counter key failure/,
+    )
+    assert.strictEqual(JSON.stringify(state.tokens), before)
+    failCounterKey = false
+    assert.match(applyWithRuntime('Figure. Next.\n', runtime).html, /Figure 1/)
+  } catch (err) {
+    ok = false
+    console.log('caption numbering policy test "counter key transaction" failed.')
+    console.log(err)
+  }
+
+  try {
+    const invalidCounterKeyValues = [
+      null,
+      undefined,
+      '',
+      {},
+      Symbol('x'),
+      1n,
+      Promise.resolve('x'),
+      { then() {} },
+      Infinity,
+      'x'.repeat(257),
+    ]
+    for (const invalidValue of invalidCounterKeyValues) {
+      const policy = createCaptionNumberingPolicy({
+        enabledMarks: ['img'],
+        getCounterKey: () => invalidValue,
+      })
+      const runtime = createCaptionNumberingRuntime(policy)
+      assert.throws(() => applyWithRuntime('Figure. Invalid.\n', runtime), Error)
+    }
+
     const invalidKeyValues = [undefined, {}, Promise.resolve('x'), { then() {} }, Infinity, 'x'.repeat(257)]
     for (const invalidValue of invalidKeyValues) {
       const policy = createCaptionNumberingPolicy({
@@ -844,6 +1007,125 @@ const runCaptionNumberingPolicyTests = () => {
 
 pass = runCaptionNumberingPolicyTests() && pass
 
+const runStandaloneCaptionNumberingOptionTests = () => {
+  let ok = true
+  try {
+    assert.deepStrictEqual(normalizeAutoLabelNumberSets(['code', 'pre-code', 'samp', 'pre-samp', 'video']), [
+      'pre-code',
+      'pre-samp',
+      'video',
+    ])
+    assert.strictEqual(canonicalizeCaptionNumberingMark('code'), 'pre-code')
+    assert.strictEqual(canonicalizeCaptionNumberingMark('samp'), 'pre-samp')
+    assert.strictEqual(canonicalizeCaptionNumberingMark('unknown'), 'unknown')
+    assert.strictEqual(canonicalizeCaptionNumberingMark(null), null)
+    for (const invalidValue of [undefined, null, 'code', {}, 1]) {
+      assert.throws(() => normalizeAutoLabelNumberSets(invalidValue), TypeError)
+    }
+    for (const invalidEntry of [null, '', ' ', ' code', 'code ', 'unknown', 'constructor']) {
+      assert.throws(() => normalizeAutoLabelNumberSets([invalidEntry]), TypeError)
+    }
+
+    const codeMd = mdit().use(mditPCaption, { autoLabelNumberSets: ['code'] })
+    const codeHtml = codeMd.render('Code. First.\n\nCode. Second.\n\nFigure. Figure.\n\nVideo. Video.')
+    assert.match(codeHtml, /Code 1/)
+    assert.match(codeHtml, /Code 2/)
+    assert.doesNotMatch(codeHtml, /Figure 1/)
+    assert.doesNotMatch(codeHtml, /Video 1/)
+    assert.match(codeMd.render('Code. Reset.\n'), /Code 1/)
+
+    const sampHtml = mdit().use(mditPCaption, { autoLabelNumberSets: ['samp'] }).render(
+      'Terminal. First.\n\n端末　2番目。\n\n図　画像扱い。',
+    )
+    assert.match(sampHtml, /Terminal 1/)
+    assert.match(sampHtml, /端末2/)
+    assert.doesNotMatch(sampHtml, /図1/)
+
+    const videoHtml = mdit().use(mditPCaption, { autoLabelNumberSets: ['video'] }).render(
+      'Video. First.\n\n動画　2番目。',
+    )
+    assert.match(videoHtml, /Video 1/)
+    assert.match(videoHtml, /動画2/)
+
+    const precedenceHtml = mdit().use(mditPCaption, {
+      setFigureNumber: true,
+      autoLabelNumberSets: ['code'],
+    }).render('Figure. Not numbered.\n\nCode. Numbered.')
+    assert.doesNotMatch(precedenceHtml, /Figure 1/)
+    assert.match(precedenceHtml, /Code 1/)
+    const disabledHtml = mdit().use(mditPCaption, {
+      setFigureNumber: true,
+      autoLabelNumberSets: [],
+    }).render('Figure. Not numbered.\n\nTable. Not numbered.')
+    assert.doesNotMatch(disabledHtml, /Figure 1/)
+    assert.doesNotMatch(disabledHtml, /Table 1/)
+
+    const removedHtml = mdit().use(mditPCaption, {
+      autoLabelNumberSets: ['code'],
+      removeUnnumberedLabel: true,
+    }).render('Code. Removed label.')
+    assert.doesNotMatch(removedHtml, />Code/)
+    const exceptHtml = mdit().use(mditPCaption, {
+      autoLabelNumberSets: ['code'],
+      removeUnnumberedLabel: true,
+      removeUnnumberedLabelExceptMarks: ['code'],
+    }).render('Code. Kept and numbered.')
+    assert.match(exceptHtml, /Code 1/)
+    const legacyRemoveHtml = mdit().use(mditPCaption, {
+      setFigureNumber: true,
+      removeUnnumberedLabel: true,
+    }).render('Figure. Legacy remains numbered.')
+    assert.match(legacyRemoveHtml, /Figure 1/)
+
+    const formattedHtml = mdit().use(mditPCaption, {
+      autoLabelNumberSets: ['video'],
+      hasNumClass: true,
+      strongLabel: true,
+      wrapCaptionBody: true,
+    }).render('Video. Formatted.')
+    assert.match(formattedHtml, /<strong class="caption-video-label label-has-num">Video 1/)
+    assert.match(formattedHtml, /<span class="caption-video-body">Formatted\.<\/span>/)
+
+    const directState = createStateForMarkdown('Code. Direct helper.\n')
+    const directIndex = directState.tokens.findIndex(token => token.type === 'paragraph_open')
+    assert.strictEqual(
+      setCaptionParagraph(directIndex, directState, null, null, {}, { autoLabelNumberSets: ['code'] }),
+      true,
+    )
+    assert.doesNotMatch(directState.tokens[directIndex + 1].content, /Code 1/)
+
+    const callerMarks = ['code']
+    const copiedMd = mdit().use(mditPCaption, { autoLabelNumberSets: callerMarks })
+    callerMarks[0] = 'video'
+    assert.match(copiedMd.render('Code. Copied.\n\nVideo. Unchanged.'), /Code 1/)
+
+    for (const invalidOptions of [
+      { autoLabelNumberSets: undefined },
+      { autoLabelNumberSets: null },
+      { autoLabelNumberSets: 'code' },
+      { autoLabelNumberSets: ['unknown'] },
+      { autoLabelNumberSets: [null] },
+      { autoLabelNumberSets: [''] },
+    ]) {
+      assert.throws(() => mdit().use(mditPCaption, invalidOptions), TypeError)
+    }
+
+    const retryMd = mdit()
+    assert.throws(() => retryMd.use(mditPCaption, { autoLabelNumberSets: null }), TypeError)
+    assert.doesNotThrow(() => retryMd.use(mditPCaption, { autoLabelNumberSets: ['code'] }))
+    assert.match(retryMd.render('Code. Retry.'), /Code 1/)
+    assert.doesNotThrow(() => retryMd.use(mditPCaption, { autoLabelNumberSets: null }))
+    assert.match(retryMd.render('Code. Still first install.'), /Code 1/)
+  } catch (err) {
+    ok = false
+    console.log('standalone caption numbering option tests failed.')
+    console.log(err)
+  }
+  return ok
+}
+
+pass = runStandaloneCaptionNumberingOptionTests() && pass
+
 const runCaptionBoundaryTests = () => {
   let ok = true
   try {
@@ -944,6 +1226,33 @@ const runHelperExportTests = () => {
   } catch (err) {
     ok = false
     console.log('helper export test "generated label defaults" failed.')
+    console.log(err)
+  }
+
+  try {
+    const state = getMarkRegStateForLanguages(['en', 'ja'])
+    assert.strictEqual(isCaptionLabelForMark('図', 'img', state), true)
+    assert.strictEqual(isCaptionLabelForMark('図', 'pre-samp', state), true)
+    assert.strictEqual(isCaptionLabelForMark('リスト', 'pre-code', state), true)
+    assert.strictEqual(isCaptionLabelForMark('リスト', 'pre-samp', state), true)
+    assert.strictEqual(isCaptionLabelForMark('端末', 'pre-samp', state), true)
+    assert.strictEqual(isCaptionLabelForMark('端末', 'img', state), false)
+    assert.strictEqual(isCaptionLabelForMark('Figure', 'img', state), true)
+    assert.strictEqual(isCaptionLabelForMark('figure', 'img', state), true)
+    assert.strictEqual(isCaptionLabelForMark('Video', 'video', state), true)
+    assert.strictEqual(isCaptionLabelForMark('動画', 'video', state), true)
+    for (const text of [' Figure', 'Figure ', 'Figure.', 'Figur', 'Figure extra', '']) {
+      assert.strictEqual(isCaptionLabelForMark(text, 'img', state), false)
+    }
+    assert.strictEqual(isCaptionLabelForMark('図', 'img', getMarkRegStateForLanguages(['en'])), false)
+    assert.strictEqual(isCaptionLabelForMark('Figure', 'img', getMarkRegStateForLanguages(['ja'])), false)
+    assert.strictEqual(isCaptionLabelForMark('Figure', 'missing', state), false)
+    assert.strictEqual(isCaptionLabelForMark('Figure', 'img', { ...state }), false)
+    assert.strictEqual(isCaptionLabelForMark(null, 'img', state), false)
+    assert.strictEqual(isCaptionLabelForMark('Figure', null, state), false)
+  } catch (err) {
+    ok = false
+    console.log('helper export test "exact caption labels" failed.')
     console.log(err)
   }
 
