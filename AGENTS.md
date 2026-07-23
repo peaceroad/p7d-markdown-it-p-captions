@@ -122,9 +122,12 @@
 - Markdown-it 14.2+ preserves paragraph-boundary Unicode spaces with `asciiTrim`, so label-only `図　` reaches the plugin. Markdown-it 14.1 and earlier remove U+3000 before inline processing and cannot detect that form.
 
 ## 13. Test Coverage
-- Fixtures under `test/` drive expected HTML output.
-- Helper-level tests verify:
+- `npm test` runs both responsibility-based suites; `test:core` and `test:numbering` remain available for focused diagnostics.
+- `test/test.js` owns fixtures, caption parsing/decorating contracts, boundary helpers, and generic helper exports.
+- `test/test-caption-numbering.js` owns policy/runtime counters, `counterKey × sequenceKey`, callback transactions, strict overflow, numbering-specific stale decisions, standalone option validation, aliases, and duplicate `.use()` first-install-wins behavior.
+- Fixtures under `test/` drive expected HTML output in the core suite.
+- Core helper-level tests verify:
   - `setCaptionParagraph` direct-call behavior, including `sp.captionDecision` compatibility and missing-`opt` fallback safety.
   - pure helper exports such as `analyzeCaptionStart`, `analyzeCaptionParagraph`, `isCaptionLabelForMark`, `getGeneratedLabelDefaults`, `getFallbackLabelForText`, marker-prefix helpers, class lookup generation, `preferredLanguages` tie-break behavior, language-order tie-break behavior, and empty-state behavior for unsupported language lists.
   - planner/apply behavior including purity, stale-decision rejection, prefix markers, list/integration guards, composite numbers, and generated-number metadata.
-  - option normalization edge cases such as no-prefix classes, whitespace-trimmed prefixes, strict standalone mark sets, invalid-first/retry setup, duplicate `.use()` calls, and longest-first label prefix markers.
+  - non-numbering option normalization edge cases such as no-prefix classes, whitespace-trimmed prefixes, and longest-first label prefix markers.
