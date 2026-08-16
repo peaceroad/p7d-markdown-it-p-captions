@@ -17,6 +17,13 @@ const createStateForMarkdown = (markdown) => ({
   tokens: parserForState.parse(markdown, {}),
   Token,
 })
+const getParagraphIndexes = (state) => {
+  const indexes = []
+  for (let index = 0; index < state.tokens.length; index++) {
+    if (state.tokens[index].type === 'paragraph_open') indexes.push(index)
+  }
+  return indexes
+}
 
 console.log('=== Caption numbering tests ===')
 
@@ -415,6 +422,89 @@ const runCaptionNumberingPolicyTests = () => {
 
 console.log('Test: policy and render-local runtime')
 pass = runCaptionNumberingPolicyTests() && pass
+
+const runCaptionBatchConsumerTests = () => {
+  let ok = true
+
+  try {
+    const policy = createCaptionNumberingPolicy({ enabledMarks: ['img'] })
+    const runtime = createCaptionNumberingRuntime(policy)
+    const state = createStateForMarkdown(
+      'Figure. First.\n\nFigure 5. Manual.\n\nFigure. Third.\n\nPlain text.\n',
+    )
+    const paragraphIndexes = getParagraphIndexes(state)
+    const contexts = [{}, {}, {}]
+    const decisions = paragraphIndexes.slice(0, 3).map((index) => (
+      analyzeCaptionParagraph(index, state)
+    ))
+    assert.strictEqual(decisions.every(Boolean), true)
+    assert.strictEqual(decisions.every(Object.isFrozen), true)
+
+    // Mutating an unrelated paragraph must not invalidate caption-local snapshots.
+    const unrelatedInline = state.tokens[paragraphIndexes[3] + 1]
+    unrelatedInline.content = 'Changed plain text.'
+    unrelatedInline.children[0].content = 'Changed plain text.'
+
+    for (let index = 0; index < decisions.length; index++) {
+      assert.strictEqual(
+        applyCaptionParagraph(decisions[index], state, contexts[index], runtime),
+        true,
+      )
+      assert.strictEqual(contexts[index].captionDecision, decisions[index])
+    }
+    assert.match(state.tokens[decisions[0].inlineIndex].content, /^Figure 1\./)
+    assert.match(state.tokens[decisions[1].inlineIndex].content, /^Figure 5\./)
+    assert.match(state.tokens[decisions[2].inlineIndex].content, /^Figure 6\./)
+  } catch (err) {
+    ok = false
+    console.log('caption batch consumer test "deferred source-order apply" failed.')
+    console.log(err)
+  }
+
+  try {
+    const policy = createCaptionNumberingPolicy({ enabledMarks: ['img'] })
+    const runtime = createCaptionNumberingRuntime(policy)
+    const state = createStateForMarkdown('Figure. First.\n\nFigure. Second.\n')
+    const paragraphIndexes = getParagraphIndexes(state)
+    const firstDecision = analyzeCaptionParagraph(paragraphIndexes[0], state)
+    const secondDecision = analyzeCaptionParagraph(paragraphIndexes[1], state)
+
+    // Generated numbering is committed in apply order, not analyze order.
+    assert.strictEqual(applyCaptionParagraph(secondDecision, state, {}, runtime), true)
+    assert.strictEqual(applyCaptionParagraph(firstDecision, state, {}, runtime), true)
+    assert.match(state.tokens[secondDecision.inlineIndex].content, /^Figure 1\./)
+    assert.match(state.tokens[firstDecision.inlineIndex].content, /^Figure 2\./)
+  } catch (err) {
+    ok = false
+    console.log('caption batch consumer test "apply-order numbering" failed.')
+    console.log(err)
+  }
+
+  try {
+    const shiftedState = createStateForMarkdown('Plain text.\n\nFigure. Shifted.\n')
+    const paragraphIndexes = getParagraphIndexes(shiftedState)
+    const shiftedParagraph = shiftedState.tokens[paragraphIndexes[1]]
+    const shiftedDecision = analyzeCaptionParagraph(paragraphIndexes[1], shiftedState)
+    shiftedState.tokens.splice(0, 0, new Token('text', '', 0))
+    assert.strictEqual(applyCaptionParagraph(shiftedDecision, shiftedState), false)
+    assert.strictEqual(shiftedParagraph.attrGet('class'), null)
+
+    const replacedState = createStateForMarkdown('Figure. Replaced array.\n')
+    const replacedIndex = replacedState.tokens.findIndex(token => token.type === 'paragraph_open')
+    const replacedDecision = analyzeCaptionParagraph(replacedIndex, replacedState)
+    replacedState.tokens = replacedState.tokens.slice()
+    assert.strictEqual(applyCaptionParagraph(replacedDecision, replacedState), false)
+  } catch (err) {
+    ok = false
+    console.log('caption batch consumer test "structural stale decisions" failed.')
+    console.log(err)
+  }
+
+  return ok
+}
+
+console.log('Test: deferred batch consumers')
+pass = runCaptionBatchConsumerTests() && pass
 
 const runStandaloneCaptionNumberingOptionTests = () => {
   let ok = true

@@ -7,7 +7,8 @@
 
 ## 2. Registration & Traversal
 - `md.core.ruler.after('inline', 'p-caption', ...)` scans all tokens once per render.
-- For each paragraph token, `setCaptionParagraph` decides if it is a caption and injects label spans.
+- The standalone rule uses the same private analyze/apply primitives as `setCaptionParagraph`, while skipping public-helper option resolution and deferred-decision snapshots.
+- A standalone numbering runtime is allocated lazily after caption recognition rather than at render start; strict sets skip marks outside their enabled set, while the legacy path initializes on its first recognized caption to avoid falling back to a fresh plain counter object.
 - Skips paragraphs that are immediately after `list_item_open` to avoid list-item edge cases.
 
 ## 3. Label Regex State
@@ -110,7 +111,9 @@
   - `stripLabelPrefixMarker`
 - `markReg` direct export is removed; integrators should build matcher maps via `getMarkRegForLanguages(languages)`.
 - `setCaptionParagraph` returns `true` when it mutates a caption paragraph and `false` for no-op/guard exits. Callers should not expect the old no-op `caption` return value.
+- `setCaptionParagraph` shares the private analysis/apply primitives but intentionally avoids the public deferred API's decision freeze, child snapshot allocation, WeakMap storage, and stale-validation pass.
 - Decisions returned by `analyzeCaptionParagraph` are frozen and must be passed by identity to `applyCaptionParagraph`; stale, copied, or reindexed decisions fail closed.
+- Multiple decisions may be collected from one token array and applied while their original indexes and caption-local snapshots remain current. Numbering state advances in apply order. Batch consumers should apply every caption decision before rebuilding or reindexing the block-token array.
 - Direct `setCaptionParagraph` callers may pass partial option objects; missing fields are filled with plugin defaults and normalized before use.
 - Direct helper option objects are cached by object identity after normalization; callers should treat them as immutable and pass a fresh object for different settings.
 - A runtime returned by `createCaptionNumberingRuntime` is mutable only through private state and must be created once per render; policies may be shared across renders.
@@ -124,7 +127,7 @@
 ## 13. Test Coverage
 - `npm test` runs both responsibility-based suites; `test:core` and `test:numbering` remain available for focused diagnostics.
 - `test/test.js` owns fixtures, caption parsing/decorating contracts, boundary helpers, and generic helper exports.
-- `test/test-caption-numbering.js` owns policy/runtime counters, `counterKey × sequenceKey`, callback transactions, strict overflow, numbering-specific stale decisions, standalone option validation, aliases, and duplicate `.use()` first-install-wins behavior.
+- `test/test-caption-numbering.js` owns policy/runtime counters, `counterKey × sequenceKey`, callback transactions, strict overflow, deferred multi-decision batch-consumer contracts, numbering-specific stale decisions, standalone option validation, aliases, and duplicate `.use()` first-install-wins behavior.
 - Fixtures under `test/` drive expected HTML output in the core suite.
 - Core helper-level tests verify:
   - `setCaptionParagraph` direct-call behavior, including `sp.captionDecision` compatibility and missing-`opt` fallback safety.

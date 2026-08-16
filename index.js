@@ -304,9 +304,9 @@ const langGeneratedLabelDefaultsCache = Object.create(null)
 const getLangGeneratedLabelDefaults = (lang) => {
   const cached = langGeneratedLabelDefaultsCache[lang]
   if (cached !== undefined) return cached
-  const generatedDefaults = normalizeGeneratedLabelDefaultsForData(langSets[lang])
-  langGeneratedLabelDefaultsCache[lang] = generatedDefaults || null
-  return langGeneratedLabelDefaultsCache[lang]
+  const generatedDefaults = normalizeGeneratedLabelDefaultsForData(langSets[lang]) || null
+  langGeneratedLabelDefaultsCache[lang] = generatedDefaults
+  return generatedDefaults
 }
 
 const buildPrioritizedEntries = (singleMarkEntries, markRegEntries, primaryMark, secondaryMark) => {
@@ -455,13 +455,13 @@ const normalizeAutoLabelNumberSets = (value) => {
   return Object.freeze(normalized)
 }
 
-const normalizeRemoveUnnumberedLabelExceptMarks = (value) => {
-  if (!Array.isArray(value) || value.length === 0) return []
-  const normalized = new Array(value.length)
+const buildRemoveUnnumberedLabelExceptMarksSet = (value) => {
+  if (!Array.isArray(value) || value.length === 0) return null
+  const exceptMarks = new Set()
   for (let index = 0; index < value.length; index++) {
-    normalized[index] = canonicalizeCaptionNumberingMark(value[index])
+    exceptMarks.add(canonicalizeCaptionNumberingMark(value[index]))
   }
-  return normalized
+  return exceptMarks
 }
 
 const baseSetCaptionOpt = {
@@ -508,14 +508,9 @@ const resolveSetCaptionOpt = (opt) => {
   if (!hasConfiguredLabelClassFollowsFigure && normalized.figureToLabelClassMap) {
     normalized.labelClassFollowsFigure = true
   }
-  normalized.removeUnnumberedLabelExceptMarks = normalizeRemoveUnnumberedLabelExceptMarks(
+  normalized.removeUnnumberedLabelExceptMarksSet = buildRemoveUnnumberedLabelExceptMarksSet(
     normalized.removeUnnumberedLabelExceptMarks,
   )
-  if (normalized.removeUnnumberedLabelExceptMarks.length > 0) {
-    normalized.removeUnnumberedLabelExceptMarksSet = new Set(normalized.removeUnnumberedLabelExceptMarks)
-  } else {
-    normalized.removeUnnumberedLabelExceptMarksSet = null
-  }
 
   const labelPrefixMarkers = normalizeLabelPrefixMarkers(normalized.labelPrefixMarker)
   normalized.labelPrefixMarkerReg = buildLabelPrefixMarkerRegFromMarkers(labelPrefixMarkers)
@@ -649,7 +644,7 @@ const resolvePreferredGeneratedLabelLanguages = (mark, state, preferredLanguages
       const seen = new Set()
       for (let i = 0; i < normalizedPreferred.length; i++) {
         const lang = normalizedPreferred[i]
-        if (!allowed.has(lang) || seen.has(lang)) continue
+        if (!allowed.has(lang)) continue
         seen.add(lang)
         ordered.push(lang)
       }
@@ -670,11 +665,7 @@ const resolvePreferredGeneratedLabelLanguages = (mark, state, preferredLanguages
   }
   return candidates
 }
-const detectFallbackLanguageForText = (text, markRegState, mark, preferredLanguages = null) => {
-  const state = (
-    markRegState &&
-    markRegState.generatedLabelDefaultsByLang
-  ) ? markRegState : defaultMarkRegState
+const detectFallbackLanguageForText = (text, state, mark, preferredLanguages = null) => {
   const candidateLanguages = resolvePreferredGeneratedLabelLanguages(mark, state, preferredLanguages)
   if (candidateLanguages.length === 0) return ''
   if (candidateLanguages.length === 1) return candidateLanguages[0]
@@ -732,8 +723,12 @@ const normalizeLabelPrefixMarkers = (value) => {
     return value ? [value] : []
   }
   if (Array.isArray(value)) {
-    const normalized = value.filter(entry => typeof entry === 'string' && entry)
-    return normalized.length > 2 ? normalized.slice(0, 2) : normalized
+    const normalized = []
+    for (let index = 0; index < value.length && normalized.length < 2; index++) {
+      const entry = value[index]
+      if (typeof entry === 'string' && entry) normalized.push(entry)
+    }
+    return normalized
   }
   return []
 }
@@ -742,7 +737,6 @@ const buildLabelPrefixMarkerRegFromMarkers = (markers) => {
   const markerList = markers.filter(entry => typeof entry === 'string' && entry)
   if (!markerList.length) return null
   const pattern = markerList
-    .slice()
     .sort((a, b) => b.length - a.length)
     .map(escapeRegExp)
     .join('|')
@@ -820,13 +814,7 @@ const stripLabelPrefixMarker = (inlineToken, markerText) => {
 }
 
 const decodeCaptionMatch = (match) => {
-  if (!match) {
-    return {
-      labelText: '',
-      number: undefined,
-    }
-  }
-  const groups = match.groups
+  const groups = match && match.groups
   if (!groups || groups[labelGroupName] === undefined) {
     return {
       labelText: '',
@@ -975,9 +963,12 @@ const stripLabelSuffix = (className) => {
 const normalizeClassBaseList = (raw) => {
   if (!raw) return []
   const list = Array.isArray(raw) ? raw : String(raw).split(/\s+/)
-  return list
-    .map(entry => stripLabelSuffix(entry.trim()))
-    .filter(Boolean)
+  const bases = []
+  for (let index = 0; index < list.length; index++) {
+    const base = stripLabelSuffix(list[index].trim())
+    if (base) bases.push(base)
+  }
+  return bases
 }
 
 const appendSuffixIfMissing = (base, suffix) => {
@@ -1084,7 +1075,8 @@ const createStandaloneCaptionNumberingPolicy = (option, opt, hasExplicitSets) =>
   let enabledMarks = normalizedMarks
   if (opt.removeUnnumberedLabel) {
     const exceptMarks = opt.removeUnnumberedLabelExceptMarksSet
-    enabledMarks = normalizedMarks.filter(mark => exceptMarks && exceptMarks.has(mark))
+    if (!exceptMarks) return null
+    enabledMarks = normalizedMarks.filter(mark => exceptMarks.has(mark))
   }
   if (enabledMarks.length === 0) return null
   return createCaptionNumberingPolicy({
@@ -1108,16 +1100,21 @@ const mditPCaption = (md, option) => {
   )
 
   md.core.ruler.after('inline', 'p-caption', (state) => {
-    const numberingRuntime = numberingPolicy
-      ? createCaptionNumberingRuntime(numberingPolicy, { env: state.env })
-      : null
+    let numberingRuntime = null
     const tokens = state.tokens
     const len = tokens.length
     for (let n = 0; n < len - 1; n++) {
       if (tokens[n].type !== 'paragraph_open') continue
-      // Core plugin does not track caption/sp state, but helper keeps these args
-      // for downstream integrations such as p7d-markdown-it-figure-with-p-caption.
-      setCaptionParagraph(n, state, null, numberingRuntime, null, opt)
+      const decision = analyzeCaptionParagraphWithOpt(n, state, '', false, false, opt)
+      if (!decision) continue
+      if (
+        !numberingRuntime &&
+        numberingPolicy &&
+        (opt.setFigureNumber || numberingPolicy.enabledMarks[decision.mark])
+      ) {
+        numberingRuntime = createCaptionNumberingRuntime(numberingPolicy, { env: state.env })
+      }
+      applyCaptionParagraphWithOpt(decision, state, null, numberingRuntime, opt)
     }
   })
   Object.defineProperty(md, installedKey, {
@@ -1432,6 +1429,7 @@ const resolveLegacyCaptionNumbering = (decision, legacyState) => {
 }
 
 const resolveCaptionNumbering = (decision, context, numberingRuntimeOrLegacyState, opt) => {
+  if (!numberingRuntimeOrLegacyState && !opt.setFigureNumber) return null
   const runtimeState = captionNumberingRuntimeState.get(numberingRuntimeOrLegacyState)
   if (runtimeState) return resolveRuntimeCaptionNumbering(decision, context, runtimeState)
   if (!opt.setFigureNumber) return null
@@ -1442,7 +1440,6 @@ const resolveCaptionNumbering = (decision, context, numberingRuntimeOrLegacyStat
 }
 
 const commitCaptionNumbering = (numberingPlan) => {
-  if (!numberingPlan) return
   if (numberingPlan.runtimeState) {
     commitRuntimeCounter(
       numberingPlan.runtimeState,
@@ -1456,7 +1453,6 @@ const commitCaptionNumbering = (numberingPlan) => {
 }
 
 const applyGeneratedNumber = (nextToken, actualLabel, generatedNumber, generatedNumberHasNumClass) => {
-  if (generatedNumber === null) return
   const markCode = actualLabel.mark ? actualLabel.mark.charCodeAt(0) : 0
   const replacement = actualLabel.mark + (isAsciiAlphaCode(markCode) ? ' ' : '') + generatedNumber
   actualLabel.num = generatedNumber
@@ -1487,12 +1483,14 @@ const applyCaptionParagraphWithOpt = (decision, state, context, numberingRuntime
 
   const paragraphClass = opt.paragraphClassByMark && opt.paragraphClassByMark[decision.mark]
   token.attrJoin('class', paragraphClass || buildParagraphClassName(decision.mark, opt))
-  applyGeneratedNumber(
-    nextToken,
-    actualLabel,
-    numberingPlan && numberingPlan.generatedNumber,
-    numberingPlan && numberingPlan.generatedNumberHasNumClass,
-  )
+  if (numberingPlan && numberingPlan.generatedNumber !== null) {
+    applyGeneratedNumber(
+      nextToken,
+      actualLabel,
+      numberingPlan.generatedNumber,
+      numberingPlan.generatedNumberHasNumClass,
+    )
+  }
 
   let convertJointSpaceFullWith = false
   if (opt.jointSpaceUseHalfWidth && actualLabel.joint === '　') {
@@ -1500,7 +1498,7 @@ const applyCaptionParagraphWithOpt = (decision, state, context, numberingRuntime
     convertJointSpaceFullWith = true
   }
   addLabelToken(state, nextToken, decision.mark, actualLabel, convertJointSpaceFullWith, opt, context)
-  commitCaptionNumbering(numberingPlan)
+  if (numberingPlan) commitCaptionNumbering(numberingPlan)
   if (context && typeof context === 'object') {
     context.captionDecision = decision
   }

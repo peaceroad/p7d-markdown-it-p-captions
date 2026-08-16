@@ -93,7 +93,7 @@ const opt = {
 };
 ```
 
-`setCaptionParagraph` remains the compatibility wrapper around analyze + apply. It mutates the token stream and returns a boolean: `true` when it detected and transformed a caption paragraph, otherwise `false`. Direct callers may pass partial options; missing fields use the same defaults as the plugin setup path. Treat the options object as immutable after the first helper call; create a new options object if you need different settings.
+`setCaptionParagraph` remains the compatibility wrapper around the same private analysis/apply primitives. It mutates the token stream and returns a boolean: `true` when it detected and transformed a caption paragraph, otherwise `false`. Its immediate path does not create the frozen decision snapshot used by the public deferred API. Direct callers may pass partial options; missing fields use the same defaults as the plugin setup path. Treat the options object as immutable after the first helper call; create a new options object if you need different settings.
 
 The helper's fourth argument accepts either the legacy plain `{ img, table }` counter used with `setFigureNumber: true`, or a runtime returned by `createCaptionNumberingRuntime()`. A branded runtime owns its policy independently of `setFigureNumber`; this lets an integrator enable only the captions that have passed its final structural checks. Direct helpers never create a runtime merely because `autoLabelNumberSets` appears in their formatting options.
 
@@ -117,7 +117,7 @@ context.captionDecision = {
 
 `captionDecision` always describes the source. An auto-generated number does not replace `number` or change `hasExplicitNumber`; deferred frozen decisions are never mutated.
 
-Pass the frozen decision object returned by `analyzeCaptionParagraph` directly to `applyCaptionParagraph`; cloning it intentionally loses the private validation snapshot. Apply decisions before rebuilding or reindexing the block token array. Different paragraph decisions can be analyzed first and then applied because applying a caption only mutates that paragraph and its inline children.
+Pass the frozen decision object returned by `analyzeCaptionParagraph` directly to `applyCaptionParagraph`; cloning it intentionally loses the private validation snapshot. Multiple paragraph decisions may be analyzed from the same token array and then applied while their original indexes and caption-local snapshots remain current. Apply them in the intended numbering order because generated numbers and explicit-number counter updates are committed in apply order, not analyze order. Applying one caption does not invalidate an untouched decision for another caption. Consumers planning structural block-token edits should apply all caption decisions before rebuilding or reindexing the block token array.
 
 The optional analyzer `context` uses `{ captionName, isIframeTypeBlockquote, isVideoIframe }`. The apply `context` is also used for figure-class mirroring (`figureClassName`) and receives `captionDecision` after a successful mutation.
 
