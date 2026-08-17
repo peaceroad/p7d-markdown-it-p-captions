@@ -2,7 +2,6 @@ import assert from 'assert'
 import fs from 'fs'
 import path from 'path'
 import mdit from 'markdown-it'
-import Token from 'markdown-it/lib/token.mjs'
 import { fileURLToPath } from 'url'
 
 import mditPCaption, {
@@ -21,6 +20,9 @@ import mditPCaption, {
   setCaptionParagraph,
   stripLabelPrefixMarker,
 } from '../index.js'
+
+const Token = mdit.Token
+assert.strictEqual(typeof Token, 'function', 'markdown-it must expose Token from its root API')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 

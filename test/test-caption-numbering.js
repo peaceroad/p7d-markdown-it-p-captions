@@ -1,6 +1,5 @@
 import assert from 'assert'
 import mdit from 'markdown-it'
-import Token from 'markdown-it/lib/token.mjs'
 
 import mditPCaption, {
   analyzeCaptionParagraph,
@@ -11,6 +10,9 @@ import mditPCaption, {
   normalizeAutoLabelNumberSets,
   setCaptionParagraph,
 } from '../index.js'
+
+const Token = mdit.Token
+assert.strictEqual(typeof Token, 'function', 'markdown-it must expose Token from its root API')
 
 const parserForState = mdit()
 const createStateForMarkdown = (markdown) => ({

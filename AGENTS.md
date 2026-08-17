@@ -122,6 +122,7 @@
 ## 12. Runtime Compatibility
 - JSON import attributes in `lang.js` are intentional.
 - Use a runtime version that supports the `with { type: 'json' }` import-attributes syntax.
+- The development suite targets markdown-it 15 and obtains synthetic token constructors from the public `MarkdownIt.Token` root export. Do not reintroduce `markdown-it/lib/*` imports; production helpers continue to construct tokens through `state.Token`.
 - Markdown-it 14.2+ preserves paragraph-boundary Unicode spaces with `asciiTrim`, so label-only `図　` reaches the plugin. Markdown-it 14.1 and earlier remove U+3000 before inline processing and cannot detect that form.
 
 ## 13. Test Coverage
